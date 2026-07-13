@@ -1,197 +1,94 @@
-# Plan: the inference cascade as a Hylograph showcase — kibitzer.hylograph.net
-
-*Status: planned, not started. 2026-07-13.*
+# Kibitzer phase 3 — the Hylograph cascade viewer (detailed implementation plan)
 
 ## Context
 
-The derivation feed is honest but flat: a list. The structure it hides
-is exactly what makes the watcher interesting — *relationships*. Which
-facts licensed which; the moment a third card pins a hand and sixteen
-exclusions avalanche out of it; a disjunction born at E2 quietly losing
-candidates for sixty events and then snapping shut. The plan: a
-Hylograph-rendered view where facts **cascade in** under the General
-Update Pattern (Hylograph HATS has first-class GUP — `GUPSpec` with
-enter/update/exit `PhaseSpec`s in `Hylograph.HATS`, animated by
-hylograph-transitions), published as **kibitzer.hylograph.net** — a
-Hylograph showcase in its own right.
+The derivation feed is honest but flat. The structure worth *seeing* is relational: which facts licensed which, the avalanche when a hand completes, a disjunction born at E2 losing candidates for sixty events and snapping shut. Goal: a **Cascade tab** where facts animate onto the notebook under the General Update Pattern, rendered by Hylograph HATS — making kibitzer a Hylograph showcase (target: kibitzer.hylograph.net). This supersedes the sketch in `docs/hylograph-cascade-plan.md` with an API-grounded plan; after approval, copy the substance back into that doc and commit.
 
-## Prerequisite: the full premise DAG (core change)
+**Ground truth from exploring the Hylograph libs** (all verified, not assumed):
 
-Today `Justification` carries `rule`, `source` (triggering event) and
-`origin` (show-event a disjunction resolved from) — enough for prose,
-not enough to *draw* the cascade. Extend it:
+- The join: `forEachWithGUP :: String -> ElementType -> Array a -> (a -> String) -> (a -> Tree) -> GUPSpec a -> Tree` in `Hylograph.HATS` (purescript-hylograph-selection). `GUPSpec a` = enter/update/exit `PhaseSpec`s; `PhaseSpec = { attrs :: Array Attr, transition :: Maybe TransitionConfig }`.
+- The `TransitionConfig` GUP uses is `Hylograph.Internal.Transition.Types` — `{ duration, delay, staggerDelay :: Maybe Number, easing }`, helpers `transition` / `staggeredTransition`. **Beware**: `Hylograph.Transition.Engine` (hylograph-transitions) exports a *different* `TransitionConfig` — do not import that one for phases.
+- Entry point: `rerender :: String -> Tree -> Effect RerenderResult` (`Hylograph.HATS.InterpreterTick`) — selector-string container, returns `{ selections, transitions :: Maybe HATSTransitions }`.
+- **Nothing in the repo ever calls `tickTransitions`** — `rerender` creates transitions but no showcase animates them. The RAF driver is ours to write (`Hylograph.HATS.Transitions.tickTransitions :: Number -> HATSTransitions -> Effect TransitionResult`, + `Hylograph.Transition.RAF.requestAnimationFrame/performanceNow`). Exit elements are only removed by the tick loop — the driver is mandatory for correct GUP, not a nicety.
+- **Only numeric attributes animate** (interpreter parses attr values to Number). Design consequence: choreography = positions (cx/cy/x/y/x1..y2), radii, opacity. Straight hairline `Line`s for provenance (x1,y1,x2,y2 all numeric), no path morphing. Fits the Swiss style.
+- **Stagger is per-index only** (`delay = base + staggerDelay × idx`). Design consequence: sort the entering-facts array by derivation depth, so index-stagger *is* depth-stagger.
+- Halogen hosting pattern (from showcase `halogen-spider/src/SiteExplorer/App.purs`): render an empty `HH.div [ HP.id "cascade-view" ] []`, call `rerender "#cascade-view" tree` from `handleAction` in `Effect`; HATS owns all DOM under the container; events bridge back via `Halogen.Subscription` (we already use `HS.create` for the ticker).
+- Package wiring: three `extraPackages` path entries in the root spago.yaml — `hylograph-selection` (also needs) `hylograph-graph`, `hylograph-transitions`, at `../purescript-hylograph-libs/purescript-hylograph-*`. They inherit kibitzer's registry 73.3.0 (their own pins are ignored as path members); no expected conflicts, verify at the spike.
+
+## Milestone 1 — core: full provenance (premises + origins)
+
+Extend `Justification` in `core/src/Kibitzer/Knowledge.purs`:
 
 ```purescript
 type Justification =
   { rule :: Rule
   , source :: EventId
-  , origin :: Maybe EventId
-  , premises :: Array FactId   -- NEW: the facts this derivation consumed
+  , origins :: Array EventId     -- was `origin :: Maybe EventId`; show-events involved
+  , premises :: Array FactId     -- NEW: facts this derivation consumed
   }
 ```
 
-Per-rule premise capture (each rule already looks the premises up; it
-just doesn't say so):
+Per-rule capture in `Infer` (each rule already looks these up; make it say so). Add `factIdFor :: Claim -> Knowledge -> Maybe FactId` (linear scan of `facts` is fine at this size):
 
-- `OwnHand` / `SawCard` / `PassImpliesLacks` — no premises (direct observation).
-- `UniqueOwner` — the `Holds` fact.
-- `HandComplete` — the player's `Holds` facts.
-- `EnvelopeByElimination` — one `Lacks` fact per player.
-- `CategoryCount` — the `envelopeOut`/`envelopeIn` facts counted.
-- `EnvelopeExcludesHands` — the `InEnvelope` fact.
-- `LastCandidateHand` — the `NotInEnvelope` fact + the excluding `Lacks` facts.
-- `SingletonDisjunction` — the facts that pruned the dead candidates
-  (pruning must record *which* fact killed each candidate — either keep
-  a `Map Claim FactId` index on `Knowledge`, or search the facts array;
-  both are cheap at this size).
+- Direct rules (`OwnHand`/`SawCard`/`PassImpliesLacks`): premises `[]`.
+- `UniqueOwner`: the `Holds` fact. `HandComplete`: the player's `Holds` facts. `EnvelopeByElimination`: one `Lacks` per player. `CategoryCount`: the counted envelope facts. `EnvelopeExcludesHands`: the `InEnvelope` fact. `LastCandidateHand`: the `NotInEnvelope` fact + excluding `Lacks` facts.
+- `SingletonDisjunction`: the facts that pruned dead candidates (lookup via `factIdFor` on `Lacks shower c` / `Holds other c`); origins = [disjunction source].
+- `DisjunctionCapacity` / `DisjunctionPigeonhole`: premises = the player's `Holds` facts (capacity) / pruning facts where crisply attributable; origins = source events of the involved disjunctions. Partial provenance here is acceptable and documented — arcs need an anchor, not a proof term.
 
-Consequences, all pleasant: FactIds are allocated in derivation order,
-so `premises` pointing only at smaller ids gives acyclicity for free —
-pin it as a property test (`all (_ < f.id) f.justification.premises`).
-Golden fact *counts* are unchanged; the feed tooltips get better prose
-for free ("because F12, F31").
+Ripples: `Describe.describeFact` (origins plural), Feed view, KnowledgeSpec assertions (`origin` → `origins`). New property in PropSpec or KnowledgeSpec: **premise acyclicity for free** — `all (_ < f.id) f.justification.premises` for every fact, every perspective, both modes. Golden fact *counts* unchanged (re-pin only if Eq-shaped assertions bite).
 
-Then a pure, tested cascade model in core (`Kibitzer.Cascade`):
+## Milestone 2 — core: `Kibitzer.Cascade` (pure, tested)
 
 ```purescript
+type CascadeEdge = { from :: FactId, to :: FactId }
 type CascadeFrame =
-  { newFacts :: Array Fact        -- born at this position
-  , depth :: Map FactId Int       -- longest premise chain within the frame
-  , edges :: Array { from :: FactId, to :: FactId }
-  , disjunctionStates :: ...      -- born / pruned / resolved this frame
+  { newFacts :: Array Fact          -- born at this position, sorted by (depth, id)  ← index-stagger = depth-stagger
+  , depth :: Map FactId Int         -- longest premise chain within the frame (0 = direct)
+  , edges :: Array CascadeEdge      -- premise → conclusion, including into older facts
+  , disjunctions :: Array Disjunction  -- live state at this position (for brackets)
   }
-cascadeTimeline :: PlayerCount -> Log -> Array CascadeFrame
+cascadeTimeline :: PlayerCount -> Perspective -> Log -> Array CascadeFrame   -- |log|+1, index-aligned with knowledgeTimeline
 ```
 
-Depth drives the animation stagger; the avalanche *is* the depth
-structure made visible.
+Tests (`Test.CascadeSpec`): depths are 0 for observation-rule facts; every edge's `from` precedes `to`; frame newFacts partition the final fact list; seed-42 golden spot-checks (the E61 resolution frame has depth ≥ 1 and an edge from a pass-fact).
 
-## The design (primary): the notebook comes alive
+## Milestone 3 — frontend: wiring spike (static SVG notebook via HATS)
 
-Keep the 21×(N+1) grid as the spatial anchor — it is already the
-reader's mental model — and let Hylograph draw on top of it:
+- Root `spago.yaml`: add the three `extraPackages`; frontend deps += `hylograph-selection`, `hylograph-transitions`, `refs`. **Gate: `spago build` green against registry 73.3.0** before anything else.
+- New tab `CascadeTab` (Types/App/header, same pattern as About/Code). Its pane: `HH.div [ HP.id "cascade-view" ] []` — Halogen never renders children under it.
+- New module `Kibitzer.Frontend.Cascade.Scene` (pure `Tree` building): the whole notebook as SVG — layout constants module computes cell centres `(cardIndex, column) -> {x, y}` with category gaps; row labels as `Text`, grid hairlines as `Line`, header letters. Static render on `SetTab CascadeTab` via `rerender "#cascade-view"`.
+- Verify: tab shows the SVG grid, switching tabs back and forth doesn't duplicate or orphan DOM (HATS diffs by key).
 
-1. **Event tick**: the triggering observation appears as a token on a
-   rail beside the grid.
-2. **Direct facts** fly from the token to their cells (GUP *enter*,
-   stagger 0).
-3. **Derived facts cascade**: arcs from premise cells to the new cell,
-   staggered by derivation depth (~120ms per level), each arc pulsing
-   then fading to a faint persistent trace (a "show all wiring" toggle
-   keeps them). A completed hand visibly detonates: one cell fills,
-   sixteen ✗ ripple down the column, envelope cells flip across the
-   rule.
-4. **Disjunctions** get real geometry at last: a bracket/halo linking
-   the three candidate cells in the shower's column; pruning snips a
-   segment (GUP *exit* on the segment, with its killing fact flashing);
-   resolution collapses the bracket into the surviving cell — the E2 →
-   E61 payoff becomes a visible spring under tension for 59 events.
-5. **Scrubbing backward** retracts facts through the *exit* phase —
-   monotonicity means the join (keyed by `FactId`) is always clean.
-6. Under the timeline, a **facts-per-event strip** (tiny bars) shows
-   where the avalanches live and invites scrubbing straight to them.
+## Milestone 4 — GUP marks + the RAF driver
 
-**Alternative kept in reserve**: a provenance-DAG timeline (x = event
-index, y = derivation depth, nodes = facts, edges = premises) — better
-for the *shape* of avalanches, worse as a first read; could become a
-sub-toggle of the tab later. Force-directed layout rejected as primary:
-organic but illegible for this data.
+- `Kibitzer.Frontend.Cascade.Driver` (~40 lines, the piece nobody has written): holds `Ref (Maybe { frameId :: AnimationFrameId, transitions :: HATSTransitions, lastTs :: Timestamp })`; `start :: Driver -> HATSTransitions -> Effect Unit` cancels any running loop, then RAF-loops `tickTransitions (now - lastTs)` until `Complete`. **Upstream candidate**: after it works, offer it to hylograph-transitions as the missing GUP clock.
+- Fact marks: `forEachWithGUP "facts" Group factsUpTo keyByFactId markTemplate gupSpec` — datum = fact + cell coords + depth + fresh-this-frame flag. Mark = small `Circle`/`Text` glyph at its cell (✓ filled circle, ✗ cross as Text, envelope column accent). Enter phase: `attrs` start at the event-rail anchor with opacity 0 and animate to cell position, `staggeredTransition (Milliseconds 500.0) 90.0` (index = depth order from Milestone 2's sorting). Update: identity/no-op quick transition. Exit (backward scrub): opacity+r → 0, removed by the driver on completion.
+- App integration: every position-changing action (`Scrub`, `Tick`, `StepBack/Forward`, `Jump*`, new game), when `tab == CascadeTab`, rebuilds the tree for the new position and calls `rerender` + `Driver.start`. Rapid scrubbing is safe: each rerender supersedes; driver cancels the old loop. If thrash shows, debounce by one animation frame.
+- State: `driver :: Maybe Driver` created at `Initialize` (Ref in State).
 
-## Architecture
+## Milestone 5 — choreography
 
-- New tab **Cascade** in the existing frontend (Game tab untouched for
-  now; consider replacing the feed once the cascade proves itself).
-- Root `spago.yaml` gains `extraPackages` paths to
-  `../purescript-hylograph-libs/purescript-hylograph-{selection,transitions}`
-  (calypso precedent); frontend package adds the deps. Views stay
-  Halogen; the cascade pane is a container div that a HATS iteration
-  with `GUPSpec` renders into, re-joined on position change (calypso's
-  Hylograph-pane pattern). SVG, not canvas — ~150 marks max.
-- All cascade *computation* stays in kibitzer-core, pure and tested;
-  the Hylograph layer only joins and animates `CascadeFrame`s.
+- **Provenance hairlines**: joined `Line`s keyed by edge (`from-to`), from premise cell to conclusion cell; enter opacity 0 → 0.7; update phase settles them to 0.12 (the faint persistent wiring); a header toggle "wiring" flips persistent opacity 0.12 ↔ 0. Fresh-frame edges slightly thicker via class.
+- **Disjunction brackets**: join keyed by disjunction source event; vertical `Line` spanning the candidate cells in the shower's column + candidate tick marks; prune = update transition shrinks the y-extent; resolve/exit = fade. This is the E2→E61 spring made visible.
+- **Event rail**: single-datum join; current event token (Text) at the rail position; the enter-from anchor for direct facts.
+- **Facts-per-event strip**: Rect-join sparkline under the timeline (per-event newFacts counts from cascadeTimeline — invites scrubbing to avalanches). Clicking a bar = `Scrub` (behavior via `withBehaviors [onClick (HS.notify listener (Scrub i))]` — the HS bridge).
+- CSS: only container sizing/typography; all marks are SVG attrs.
 
-## Also in the UI overhaul: Sigil/Specimen typesetting for the Code tab
+## Milestone 6 — polish, Sigil spike, publish
 
-The Code tab's six exhibits are currently `<pre>` blocks with raw
-string literals. As part of the same overhaul, typeset them with
-**Sigil/Specimen** (`purescript-sigil` / `purescript-sigil-hats` from
-hylograph-libs; the rendering engine behind `code-typography/specimen`)
-— printed-quality PureScript: alignment passes, proper token colouring,
-marginalia-style commentary beside the code instead of below it. Two
-levels of ambition, decide at build time:
+- **Sigil/Specimen Code tab** (from the earlier addendum, gated spike): try `purescript-sigil` tokeniser on the six fragments; if fragments don't tokenise standalone, re-cut exhibits as tiny complete modules; modest ambition first (tokenised colouring), full Specimen marginalia only if the spike is smooth.
+- README + About: cascade section; curated-seed links (launch checklist item — a "watch the avalanche" link straight to a big frame).
+- Publish: `make dist` → `../cloudflare-sites/kibitzer/`; Cloudflare Pages project + `kibitzer.hylograph.net` DNS; Marginalia: cloudflare-host server row for the public URL (no startCommand), keep :3026 dev row; cross-link from the Hylograph showcase index.
 
-- **Modest**: run the six excerpts through Sigil tokenising/typesetting
-  at build or load time, keep the exhibit structure.
-- **Full Specimen**: the excerpts' commentary becomes true marginalia
-  (the Specimen sidenote form) and the page reads as a two-column
-  specimen sheet — which would also make kibitzer a showcase for *two*
-  members of the Hylograph family at once.
+## Verification
 
-Wrinkle to check at spike time: Specimen typesets whole modules; the
-exhibits are fragments, so either Sigil's tokeniser is used directly on
-fragments, or exhibits are re-cut as small complete modules. Fits as a
-milestone alongside the cascade choreography (independent of it — can
-land before or after).
+- Core: `spago test -p kibitzer-core` (CascadeSpec + acyclicity property + existing suite; goldens re-pinned only if Eq ripples).
+- Frontend, puppeteer against :3026 per milestone: (3) SVG grid present, 21 rows; (4) scrub to end → circle count == factCount, scrub to 0 → 0 marks and **no orphaned exit elements** (the driver test), console clean; (5) wiring toggle flips line opacity, bracket count == live disjunctions at a pinned seed/position; screenshot review at seed 42 positions {0, 62, end}.
+- Perf: hold arrow-key scrub for 5s — no RAF leak (frameId cancel), no unbounded DOM growth.
 
-## Publishing: kibitzer.hylograph.net
+## Risks / decisions taken
 
-Everything is client-side and a game is a URL, so deployment is a
-static bundle:
-
-1. Build target in the Makefile (`make dist`): bundle + `public/` →
-   `../cloudflare-sites/kibitzer/`.
-2. Cloudflare Pages project + `kibitzer.hylograph.net` DNS (pattern:
-   the existing hylograph.net sites in `cloudflare-sites/`).
-3. Marginalia: add a `cloudflare`-host server row for the public URL
-   (no startCommand — publish advisory), keep :3026 as the dev row.
-4. Cross-link: About tab gets the "part of Hylograph" line; the
-   Hylograph showcase index gains kibitzer.
-
-## Milestones
-
-1. **Premise DAG** (core): `premises` on Justification, per-rule
-   capture, acyclicity property, goldens re-pinned (counts unchanged).
-2. **Cascade model** (core): `Kibitzer.Cascade` + tests (depths,
-   edges, disjunction lifecycle).
-3. **Hylograph spike**: extraPackages wiring; Cascade tab joins facts
-   onto the grid, enter-only, no arcs. Proves the HATS/Halogen seam.
-4. **Choreography**: arcs, depth stagger, disjunction brackets,
-   backward-scrub exits, facts-per-event strip.
-5. **Publish**: `make dist`, Pages project, DNS, Marginalia rows,
-   README/About links.
-
-## If this goes to HackerNews (launch-readiness checklist)
-
-The pitch writes itself — *"a Cluedo spectator who never sees a card
-can often name the murderer; here's the metadata doing it, live"* —
-but a Show HN gets one shot, so before posting:
-
-- **Public GitHub remote** (`afcondon/kibitzer`) — it's a
-  show-your-work crowd; the repo, README and tests are half the appeal.
-- **Curated seeds**: a small "greatest hits" — a seed where the watcher
-  fully solves it, the E2→E61 slow-burn disjunction, the seed-42-moves
-  test-the-theory game — surfaced as one-click links ("watch the
-  watcher solve it"), not left to the Random button. Optional: a
-  seed-hunt script that finds watcher-wins for the shortlist.
-- **Landing experience**: default view should *animate on arrival*
-  (autoplay a curated seed?); About is the second click, not the first.
-- **Link previews**: OG/meta tags with a good still of the split
-  screen; page weight check (bundle is ~330 KB, fine); a quick pass on
-  narrow screens (the media query exists; verify the grid).
-- **Discussion-bait in the About tab**: the stats table and the
-  "board protects the players" finding are what comments will argue
-  about — make the methodology one click away (stats mode command,
-  seeds 1–100, policy caveat: random suggesters, sound-not-complete
-  watcher). Pre-empt the two obvious critiques by owning them.
-- **Show HN etiquette**: author posts it, first comment explains what
-  it is and what's deliberately simplified; the SMT/TLA+/Lean plan is
-  the natural "what's next" reply when someone asks about completeness.
-
-## Open questions (for when we pick this up)
-
-- Grid-anchored cascade as the only view, or with the DAG-timeline as
-  a toggle?
-- Does the Cascade tab eventually *replace* the Game tab's feed, or
-  stay a sibling?
-- Movement games: does the board map join the choreography (tokens as
-  event sources for Moved ticks), or stay static on this tab?
+- Full-SVG notebook on the Cascade tab (not an overlay on the HTML table): HATS must own its DOM; two renderers over one grid would fight. The Game tab keeps the HTML notebook; the Cascade tab is the animated twin. Decide *after it exists* whether it replaces the Game tab's right pane.
+- Registry 73.3.0 compat of the three local libs is unverified until the Milestone-3 gate (their bounds are ordinary stdlib ranges; low risk).
+- Depth-stagger via sorted enumeration is an approximation (within-depth items stagger slightly too) — acceptable, reads as a cascade.
+- `hylograph-graph` is a transitive dep we don't use directly; it rides along as a path member.
