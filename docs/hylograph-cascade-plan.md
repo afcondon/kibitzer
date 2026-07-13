@@ -160,6 +160,33 @@ static bundle:
 5. **Publish**: `make dist`, Pages project, DNS, Marginalia rows,
    README/About links.
 
+## If this goes to HackerNews (launch-readiness checklist)
+
+The pitch writes itself — *"a Cluedo spectator who never sees a card
+can often name the murderer; here's the metadata doing it, live"* —
+but a Show HN gets one shot, so before posting:
+
+- **Public GitHub remote** (`afcondon/kibitzer`) — it's a
+  show-your-work crowd; the repo, README and tests are half the appeal.
+- **Curated seeds**: a small "greatest hits" — a seed where the watcher
+  fully solves it, the E2→E61 slow-burn disjunction, the seed-42-moves
+  test-the-theory game — surfaced as one-click links ("watch the
+  watcher solve it"), not left to the Random button. Optional: a
+  seed-hunt script that finds watcher-wins for the shortlist.
+- **Landing experience**: default view should *animate on arrival*
+  (autoplay a curated seed?); About is the second click, not the first.
+- **Link previews**: OG/meta tags with a good still of the split
+  screen; page weight check (bundle is ~330 KB, fine); a quick pass on
+  narrow screens (the media query exists; verify the grid).
+- **Discussion-bait in the About tab**: the stats table and the
+  "board protects the players" finding are what comments will argue
+  about — make the methodology one click away (stats mode command,
+  seeds 1–100, policy caveat: random suggesters, sound-not-complete
+  watcher). Pre-empt the two obvious critiques by owning them.
+- **Show HN etiquette**: author posts it, first comment explains what
+  it is and what's deliberately simplified; the SMT/TLA+/Lean plan is
+  the natural "what's next" reply when someone asks about completeness.
+
 ## Open questions (for when we pick this up)
 
 - Grid-anchored cascade as the only view, or with the DAG-timeline as
