@@ -1,0 +1,26 @@
+package:
+  name: kibitzer-frontend
+  description: Split-screen Halogen frontend — the game on the left, the watcher's unfolding inferences on the right.
+  bundle:
+    module: Kibitzer.Frontend.Main
+    outfile: public/bundle.js
+    platform: browser
+  dependencies:
+    - aff
+    - arrays
+    - console
+    - effect
+    - foldable-traversable
+    - foreign
+    - halogen
+    - halogen-subscriptions
+    - integers
+    - kibitzer-core
+    - maybe
+    - ordered-collections
+    - prelude
+    - random
+    - strings
+    - tailrec
+    - tuples
+    - web-html

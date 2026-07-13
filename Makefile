@@ -1,6 +1,6 @@
 # kibitzer — build orchestration
 
-PORT ?= 3070
+PORT ?= 3077
 
 .PHONY: help bootstrap build test example bundle serve clean
 
