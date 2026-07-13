@@ -106,10 +106,16 @@ so the UI's feed can say:
 ```
 
 The engine is deliberately *sound but not complete*: it propagates, it
-does not SAT-solve. A cleverer watcher could squeeze out a little more
-(e.g. reasoning across overlapping disjunctions, or from suggestions
-nobody could refute). The soundness half is what the demo needs — the
-notebook never lies — and it is machine-checked:
+does not SAT-solve. We measured exactly what that costs by having Z3
+play the **optimal watcher** (`smt/optimal_watcher.py` — the public
+transcript as finite-domain constraints; a fact is certain iff its
+negation is UNSAT). Over 800 games: the engine captures 92–96% of what
+is logically certain, Z3 agrees with every one of its ~78k certainties
+(an independent soundness check), and the board-protects-the-players
+finding survives even the perfect adversary (optimal solve rate at six
+players: 40% classic vs 24% with the board). Details in
+`docs/formal-methods-follow-on.md`. The soundness half is what the demo
+needs — the notebook never lies — and it is machine-checked:
 
 ## The theorems (property tests)
 

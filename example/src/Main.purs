@@ -29,7 +29,8 @@ import Kibitzer.Game (Result, simulate)
 import Kibitzer.Infer (knowledgeAt)
 import Kibitzer.Knowledge (Knowledge, envelopeIn, envelopeOut, facts, factCount, holdsOf, lacksOf, solutionIfKnown)
 import Kibitzer.Observe (Perspective(..))
-import Kibitzer.Player (PlayerCount, PlayerId, allPlayers, defaultPlayerCount, mkPlayerCount, playerCountToInt)
+import Kibitzer.Player (PlayerCount, PlayerId(..), allPlayers, defaultPlayerCount, handSizes, mkPlayerCount, playerCountToInt)
+import Kibitzer.Suggestion (suggestionCards)
 import Kibitzer.Policy (randomLegalPolicy)
 import Kibitzer.Rng (mkSeed)
 import Node.Process (argv)
@@ -48,6 +49,7 @@ main = do
       mkPlayerCount n
   case Array.head rest of
     Just "stats" -> runStats (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
+    Just "corpus" -> runCorpus (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
     _ -> run count movement seedInt
 
 run :: PlayerCount -> Boolean -> Int -> Effect Unit
@@ -158,6 +160,84 @@ rowFor count movement n = Array.foldl accumulate empty (Array.range 1 n)
       , solved: acc.solved + if isJust (solutionIfKnown watcher) then 1 else 0
       , unfinished: acc.unfinished + if isJust result.winner then 0 else 1
       }
+
+-- | Emit every stats-mode game as one JSON object per line — the corpus
+-- | the SMT "optimal watcher" (smt/optimal_watcher.py) analyses. Only
+-- | watcher-visible information goes in `events` (passes and shows, with
+-- | the three suggested cards); the solution rides along solely for
+-- | scoring. Cards are indices into `allCards`; the Python side mirrors
+-- | that list.
+runCorpus :: Int -> Effect Unit
+runCorpus n =
+  for_ statsConfigs \(Tuple count movement) ->
+    for_ (Array.range 1 n) \seedInt ->
+      log (gameJson count movement seedInt)
+
+gameJson :: PlayerCount -> Boolean -> Int -> String
+gameJson count movement seedInt =
+  jObj
+    [ Tuple "seed" (show seedInt)
+    , Tuple "players" (show (playerCountToInt count))
+    , Tuple "movement" (if movement then "true" else "false")
+    , Tuple "handSizes" (jArr (map sizeOf players))
+    , Tuple "solution" (ixSet (suggestionCards result.solution))
+    , Tuple "events" (jArr (Array.mapMaybe eventJson result.log))
+    , Tuple "watcher" watcherJson
+    ]
+  where
+  result = simulate
+    { playerCount: count
+    , seed: mkSeed seedInt
+    , policy: randomLegalPolicy
+    , maxTurns: 600
+    , movement
+    }
+
+  watcher = knowledgeAt count Watcher (Array.length result.log) result.log
+
+  players = allPlayers count
+
+  sizeOf p = show (fromMaybe 0 (Map.lookup p (handSizes count)))
+
+  cardIx c = fromMaybe (-1) (Array.elemIndex c allCards)
+
+  ixSet s = jArr (map (show <<< cardIx) (Set.toUnfoldable s))
+
+  eventJson = case _ of
+    Passed { player: PlayerId p, suggestion } -> Just
+      ( jObj
+          [ Tuple "type" (jStr "pass")
+          , Tuple "player" (show p)
+          , Tuple "cards" (ixSet (suggestionCards suggestion))
+          ]
+      )
+    CardShown { by: PlayerId b, suggestion } -> Just
+      ( jObj
+          [ Tuple "type" (jStr "show")
+          , Tuple "by" (show b)
+          , Tuple "cards" (ixSet (suggestionCards suggestion))
+          ]
+      )
+    _ -> Nothing
+
+  watcherJson = jObj
+    [ Tuple "envelopeIn" (ixSet (envelopeIn watcher))
+    , Tuple "envelopeOut" (ixSet (envelopeOut watcher))
+    , Tuple "holds" (jArr (map (\p -> ixSet (holdsOf watcher p)) players))
+    , Tuple "lacks" (jArr (map (\p -> ixSet (lacksOf watcher p)) players))
+    ]
+
+-- Minimal JSON assembly — every string we emit is from a fixed,
+-- escape-free vocabulary.
+jStr :: String -> String
+jStr s = "\"" <> s <> "\""
+
+jArr :: Array String -> String
+jArr xs = "[" <> String.joinWith "," xs <> "]"
+
+jObj :: Array (Tuple String String) -> String
+jObj fields =
+  "{" <> String.joinWith "," (map (\(Tuple k v) -> jStr k <> ":" <> v) fields) <> "}"
 
 statsHeader :: String
 statsHeader =
