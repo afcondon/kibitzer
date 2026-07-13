@@ -6,6 +6,7 @@ import Effect (Effect)
 import Effect.Console (log)
 import Test.BoardSpec (runBoardTests)
 import Test.CardsSpec (runCardsTests)
+import Test.CascadeSpec (runCascadeTests)
 import Test.DealSpec (runDealTests)
 import Test.GameSpec (runGameTests)
 import Test.KnowledgeSpec (runKnowledgeTests)
@@ -23,6 +24,7 @@ main = do
   runKnowledgeTests
   runGameTests
   runWatcherTests
+  runCascadeTests
   runMovementTests
   runPropTests
   log "All kibitzer-core tests passed."
