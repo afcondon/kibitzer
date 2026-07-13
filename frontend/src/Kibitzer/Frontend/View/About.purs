@@ -50,6 +50,16 @@ the timeline; facts only ever accumulate."""
         , para
             """Every game is a pure function of its seed, so the URL reproduces
 the exact game — deal, dice, deductions and all."""
+        , para
+            """The Cascade tab replays the same notebook as animation. Every
+fact carries its provenance — the rule that fired, and the earlier
+facts it consumed — so derivation is a directed graph, and the Cascade
+draws it: facts fly in from the current event, chains arriving in
+derivation order, hairlines flashing from premise to conclusion (the
+"wiring" toggle keeps them), dashed spines marking the unresolved
+"showed one of these" questions. The sparkline underneath counts facts
+per event; the tall bars are avalanches — click one and watch a single
+pass close out half a column."""
         ]
     , section "The board variant"
         [ para

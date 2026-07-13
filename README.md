@@ -97,13 +97,25 @@ Termination is by monotonicity: rules only add claims to finite sets or
 shrink candidate sets, and nothing is ever retracted, so a pass that
 changes nothing is the fixpoint.
 
-Every derived fact carries provenance — the rule, the event that
-triggered it, and (for resolved disjunctions) the original show-event —
-so the UI's feed can say:
+Every derived fact carries provenance — the rule, the triggering event,
+the show-events it drew on, and the prior facts it consumed (`premises`,
+a DAG that is acyclic by construction since facts only cite smaller
+ids) — so the UI's feed can say:
 
 ```
 [E61 · only candidate left] B holds the Billiard Room (resolving the card shown at E2)
 ```
+
+The **Cascade tab** renders that DAG as animation (Hylograph HATS):
+facts fly onto an SVG notebook from the current event, staggered by
+derivation depth so chains arrive in logical order; provenance
+hairlines flash from premise to conclusion and settle into faint
+persistent wiring; unresolved "showed one of these" disjunctions stand
+as dashed spines with candidate ticks; and a facts-per-event sparkline
+invites scrubbing straight to the avalanches. The animation state is
+plain Halogen state driven by `Hylograph.Transition.Tick` — the scene
+is rebuilt as pure data every frame, in the same style as everything
+else in the app.
 
 The engine is deliberately *sound but not complete*: it propagates, it
 does not SAT-solve. We measured exactly what that costs by having Z3

@@ -1,5 +1,13 @@
 # Kibitzer phase 3 — the Hylograph cascade viewer (detailed implementation plan)
 
+*Status: Milestones 1–5 built and verified 2026-07-13 (provenance,
+Kibitzer.Cascade, the Cascade tab, Tick-pattern animation, full
+choreography). Milestone 6 (Sigil spike + kibitzer.hylograph.net
+publish) still open. One deliberate deviation: the RAF bridge became a
+self-perpetuating single-frame loop (each AnimTick schedules the next
+frame only while something moves) — simpler than a cancellable loop and
+leak-proof by construction.*
+
 ## Context
 
 The derivation feed is honest but flat. The structure worth *seeing* is relational: which facts licensed which, the avalanche when a hand completes, a disjunction born at E2 losing candidates for sixty events and snapping shut. Goal: a **Cascade tab** where facts animate onto the notebook under the General Update Pattern, rendered by Hylograph HATS — making kibitzer a Hylograph showcase (target: kibitzer.hylograph.net). This supersedes the sketch in `docs/hylograph-cascade-plan.md` with an API-grounded plan; after approval, copy the substance back into that doc and commit.
