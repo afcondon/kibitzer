@@ -110,6 +110,29 @@ organic but illegible for this data.
 - All cascade *computation* stays in kibitzer-core, pure and tested;
   the Hylograph layer only joins and animates `CascadeFrame`s.
 
+## Also in the UI overhaul: Sigil/Specimen typesetting for the Code tab
+
+The Code tab's six exhibits are currently `<pre>` blocks with raw
+string literals. As part of the same overhaul, typeset them with
+**Sigil/Specimen** (`purescript-sigil` / `purescript-sigil-hats` from
+hylograph-libs; the rendering engine behind `code-typography/specimen`)
+— printed-quality PureScript: alignment passes, proper token colouring,
+marginalia-style commentary beside the code instead of below it. Two
+levels of ambition, decide at build time:
+
+- **Modest**: run the six excerpts through Sigil tokenising/typesetting
+  at build or load time, keep the exhibit structure.
+- **Full Specimen**: the excerpts' commentary becomes true marginalia
+  (the Specimen sidenote form) and the page reads as a two-column
+  specimen sheet — which would also make kibitzer a showcase for *two*
+  members of the Hylograph family at once.
+
+Wrinkle to check at spike time: Specimen typesets whole modules; the
+exhibits are fragments, so either Sigil's tokeniser is used directly on
+fragments, or exhibits are re-cut as small complete modules. Fits as a
+milestone alongside the cascade choreography (independent of it — can
+land before or after).
+
 ## Publishing: kibitzer.hylograph.net
 
 Everything is client-side and a game is a URL, so deployment is a
