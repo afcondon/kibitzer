@@ -5,6 +5,7 @@
 module Kibitzer.Frontend.Types
   ( Game
   , State
+  , Tab(..)
   , Action(..)
   , currentKnowledge
   , currentEvent
@@ -29,6 +30,10 @@ type Game =
   , positions :: Array (Map PlayerId Position) -- index-aligned with snapshots
   }
 
+data Tab = PlayTab | AboutTab | CodeTab
+
+derive instance Eq Tab
+
 type State =
   { seedInput :: String
   , playersInput :: Int
@@ -36,10 +41,12 @@ type State =
   , game :: Maybe Game
   , position :: Int
   , playing :: Boolean
+  , tab :: Tab
   }
 
 data Action
   = Initialize
+  | SetTab Tab
   | SetSeedInput String
   | SetPlayers String
   | ToggleMoves Boolean

@@ -52,6 +52,32 @@ h1 {
   margin-top: 0.35rem;
 }
 
+.tabs {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.tab {
+  border: none;
+  background: none;
+  padding: 0 0 0.25rem;
+  font: inherit;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover { color: var(--ink); background: none; }
+
+.tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
 .counter {
   display: flex;
   gap: 2rem;
@@ -446,6 +472,70 @@ h2 {
   color: var(--muted);
   min-width: 6rem;
 }
+
+/* ---------- prose pages (About / The code) ---------- */
+
+.prose {
+  overflow-y: auto;
+  flex: 1;
+  padding: 2.5rem 2rem 4rem;
+  max-width: 72ch;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.prose-section { margin-bottom: 2.25rem; }
+
+.prose h2 {
+  font-size: 0.8rem;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.9rem;
+}
+
+.prose p {
+  margin-bottom: 0.9rem;
+  max-width: 64ch;
+}
+
+.prose pre {
+  background: var(--wash);
+  border-left: 3px solid var(--ink);
+  padding: 0.9rem 1.1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.prose code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.stats-table {
+  border-collapse: collapse;
+  margin: 0.5rem 0 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: right;
+  padding: 0.3rem 1rem 0.3rem 0;
+  border-bottom: 2px solid var(--ink);
+}
+
+.stats-table th:first-child, .stats-table td:first-child { text-align: left; }
+
+.stats-table td {
+  text-align: right;
+  padding: 0.25rem 1rem 0.25rem 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.stats-table .stat-solved { font-weight: 700; }
 
 /* ---------- narrow screens ---------- */
 

@@ -24,8 +24,10 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
-import Kibitzer.Frontend.Types (Action(..), State, currentKnowledge, maxPosition)
+import Kibitzer.Frontend.Types (Action(..), State, Tab(..), currentKnowledge, maxPosition)
+import Kibitzer.Frontend.View.About (aboutPage)
 import Kibitzer.Frontend.View.Board (boardPane)
+import Kibitzer.Frontend.View.Code (codePage)
 import Kibitzer.Frontend.View.Feed (feedPane)
 import Kibitzer.Frontend.View.Notebook (notebookPane)
 import Kibitzer.Frontend.View.Timeline (timelinePane)
@@ -52,6 +54,7 @@ component = H.mkComponent
       , game: Nothing
       , position: 0
       , playing: false
+      , tab: PlayTab
       }
   , render
   , eval: H.mkEval (H.defaultEval { handleAction = handleAction, initialize = Just Initialize })
@@ -67,6 +70,7 @@ handleAction = case _ of
       , movesInput = params.moves
       }
     startGame (fromMaybe 42 params.seed)
+  SetTab tab -> H.modify_ _ { tab = tab, playing = false }
   SetSeedInput s -> H.modify_ _ { seedInput = s }
   -- table-shape changes re-deal at once with the same seed
   SetPlayers s -> do
@@ -176,21 +180,25 @@ writeParamsToUrl seedInt players moves = do
 render :: forall m. State -> H.ComponentHTML Action () m
 render st =
   HH.div [ HP.class_ (HH.ClassName "app") ]
-    [ header st
-    , case st.game of
-        Nothing -> HH.main_ [ HH.text "Dealing…" ]
-        Just game ->
-          HH.main [ HP.class_ (HH.ClassName "split") ]
-            [ boardPane game st.position
-            , HH.div [ HP.class_ (HH.ClassName "watcher-pane") ]
-                [ notebookPane game st.position
-                , feedPane game st.position
+    case st.tab of
+      AboutTab -> [ header st, aboutPage ]
+      CodeTab -> [ header st, codePage ]
+      PlayTab ->
+        [ header st
+        , case st.game of
+            Nothing -> HH.main_ [ HH.text "Dealing…" ]
+            Just game ->
+              HH.main [ HP.class_ (HH.ClassName "split") ]
+                [ boardPane game st.position
+                , HH.div [ HP.class_ (HH.ClassName "watcher-pane") ]
+                    [ notebookPane game st.position
+                    , feedPane game st.position
+                    ]
                 ]
-            ]
-    , case st.game of
-        Nothing -> HH.text ""
-        Just game -> timelinePane game st.position st.playing
-    ]
+        , case st.game of
+            Nothing -> HH.text ""
+            Just game -> timelinePane game st.position st.playing
+        ]
 
 header :: forall m. State -> H.ComponentHTML Action () m
 header st =
@@ -199,6 +207,11 @@ header st =
         [ HH.h1_ [ HH.text "kibitzer" ]
         , HH.p [ HP.class_ (HH.ClassName "strap") ]
             [ HH.text "A Cluedo watcher who never sees a card — and solves the murder from metadata alone." ]
+        , HH.nav [ HP.class_ (HH.ClassName "tabs") ]
+            [ tabButton st PlayTab "Game"
+            , tabButton st AboutTab "About"
+            , tabButton st CodeTab "The code"
+            ]
         ]
     , HH.div [ HP.class_ (HH.ClassName "counter") ] (counter st)
     , HH.div [ HP.class_ (HH.ClassName "controls") ]
@@ -229,6 +242,15 @@ header st =
         , HH.button [ HE.onClick \_ -> RandomSeed ] [ HH.text "Random" ]
         ]
     ]
+
+tabButton :: forall m. State -> Tab -> String -> H.ComponentHTML Action () m
+tabButton st tab label =
+  HH.button
+    [ HP.classes
+        (map HH.ClassName (if st.tab == tab then [ "tab", "active" ] else [ "tab" ]))
+    , HE.onClick \_ -> SetTab tab
+    ]
+    [ HH.text label ]
 
 counter :: forall m. State -> Array (H.ComponentHTML Action () m)
 counter st = case st.game of
