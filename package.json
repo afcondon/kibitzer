@@ -1,0 +1,8 @@
+{
+  "name": "kibitzer",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

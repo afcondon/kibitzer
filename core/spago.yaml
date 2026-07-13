@@ -1,0 +1,23 @@
+package:
+  name: kibitzer-core
+  description: >
+    Pure Cluedo engine and inference core: event-log simulation, per-perspective
+    observation projection, and a saturating deduction engine with provenance.
+    The watcher never sees a card; the facts add up anyway.
+  dependencies:
+    - arrays
+    - either
+    - foldable-traversable
+    - integers
+    - maybe
+    - ordered-collections
+    - prelude
+    - strings
+    - tuples
+  test:
+    main: Test.Main
+    dependencies:
+      - effect
+      - console
+      - assert
+      - quickcheck

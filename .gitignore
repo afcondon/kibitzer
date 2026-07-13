@@ -1,0 +1,11 @@
+output/
+output-es/
+.spago/
+.psci_modules/
+node_modules/
+.psa-stash
+spago.lock
+.psc-ide-port
+.purs-repl
+bundle.js
+.DS_Store
