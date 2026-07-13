@@ -1,6 +1,9 @@
 # kibitzer — build orchestration
 
-PORT ?= 3077
+# 3026 is the Bosun-allocated port (fleet.json: kilo-papa-zulu-delta:frontend).
+# `bosun serve` lazy-spawns this same command on first request; `make serve`
+# is the manual fallback when the router isn't running.
+PORT ?= 3026
 
 .PHONY: help bootstrap build test example bundle serve clean
 

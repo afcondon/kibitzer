@@ -34,8 +34,13 @@ fixpoint of monotone deduction rules, and no partial functions.
 make build        # spago build (all packages)
 make test         # golden + property tests for the core
 make example      # CLI demo: full transcript + watcher's notebook (SEED=42)
-make bundle serve # web app on http://localhost:3077 (?seed=N is shareable)
+make bundle serve # web app on http://localhost:3026 (?seed=N is shareable)
 ```
+
+The dev URL `http://localhost:3026` is Bosun-routed (registered as
+`kilo-papa-zulu-delta:frontend` in Bosun's fleet registry; Marginalia
+project #251) — `bosun serve` lazy-spawns the static server on first
+request, so `make serve` is only needed when the router isn't running.
 
 ## The two load-bearing ideas
 
