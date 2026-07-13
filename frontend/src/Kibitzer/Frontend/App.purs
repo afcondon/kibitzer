@@ -9,6 +9,7 @@ import Prelude
 import Control.Monad.Rec.Class (forever)
 import Data.Array as Array
 import Data.Int as Int
+import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..))
 import Data.String as String
@@ -24,7 +25,12 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
-import Kibitzer.Frontend.Types (Action(..), State, Tab(..), currentKnowledge, maxPosition)
+import Hylograph.Transition.RAF as RAF
+import Kibitzer.Cascade (cascadeTimeline)
+import Kibitzer.Frontend.Cascade.Anim (animActive, emptyAnim, enterDelta, syncAnim, tickAnim)
+import Kibitzer.Frontend.Cascade.Scene (renderChrome)
+import Kibitzer.Frontend.Cascade.View (redraw)
+import Kibitzer.Frontend.Types (Action(..), Game, State, Tab(..), currentKnowledge, maxPosition)
 import Kibitzer.Frontend.View.About (aboutPage)
 import Kibitzer.Frontend.View.Board (boardPane)
 import Kibitzer.Frontend.View.Code (codePage)
@@ -33,7 +39,7 @@ import Kibitzer.Frontend.View.Notebook (notebookPane)
 import Kibitzer.Frontend.View.Timeline (timelinePane)
 import Kibitzer.Game (simulate)
 import Kibitzer.Infer (knowledgeTimeline)
-import Kibitzer.Knowledge (factCount)
+import Kibitzer.Knowledge (factCount, facts)
 import Kibitzer.Observe (Perspective(..))
 import Kibitzer.Player (defaultPlayerCount, mkPlayerCount, playerCountToInt)
 import Kibitzer.Policy (randomLegalPolicy)
@@ -55,6 +61,10 @@ component = H.mkComponent
       , position: 0
       , playing: false
       , tab: PlayTab
+      , cascadeAnim: emptyAnim
+      , animPending: false
+      , animListener: Nothing
+      , wiring: false
       }
   , render
   , eval: H.mkEval (H.defaultEval { handleAction = handleAction, initialize = Just Initialize })
@@ -64,13 +74,20 @@ handleAction :: forall o m. MonadAff m => Action -> H.HalogenM State Action () o
 handleAction = case _ of
   Initialize -> do
     startTicker
+    -- the cascade's animation-frame channel: RAF callbacks notify
+    -- AnimTick through here, back into ordinary Halogen evaluation
+    { emitter, listener } <- liftEffect HS.create
+    void (H.subscribe emitter)
+    H.modify_ _ { animListener = Just listener }
     params <- liftEffect readParamsFromUrl
     H.modify_ _
       { playersInput = fromMaybe 4 params.players
       , movesInput = params.moves
       }
     startGame (fromMaybe 42 params.seed)
-  SetTab tab -> H.modify_ _ { tab = tab, playing = false }
+  SetTab tab -> do
+    H.modify_ _ { tab = tab, playing = false }
+    when (tab == CascadeTab) initCascadeView
   SetSeedInput s -> H.modify_ _ { seedInput = s }
   -- table-shape changes re-deal at once with the same seed
   SetPlayers s -> do
@@ -96,24 +113,96 @@ handleAction = case _ of
   TogglePlay -> do
     st <- H.get
     let atEnd = map maxPosition st.game == Just st.position
+    H.modify_ _ { playing = not st.playing }
     -- pressing play at the end restarts from the top
-    H.modify_ _
-      { playing = not st.playing
-      , position = if not st.playing && atEnd then 0 else st.position
-      }
+    when (not st.playing && atEnd) (moveTo 0)
   Tick -> do
     st <- H.get
     case st.game of
       Just game | st.playing ->
         if st.position >= maxPosition game then H.modify_ _ { playing = false }
-        else H.modify_ _ { position = st.position + 1 }
+        else moveTo (st.position + 1)
       _ -> pure unit
+  -- one animation frame: advance progress, redraw, and keep the loop
+  -- alive only while something is still moving
+  AnimTick -> do
+    H.modify_ _ { animPending = false }
+    st <- H.get
+    when (st.tab == CascadeTab) do
+      let anim = tickAnim enterDelta st.cascadeAnim
+      H.modify_ _ { cascadeAnim = anim }
+      redrawCascade
+      when (animActive anim) scheduleAnimFrame
+  ToggleWiring b -> do
+    H.modify_ _ { wiring = b }
+    redrawCascade
   where
   moveTo n = do
     st <- H.get
     case st.game of
       Nothing -> pure unit
-      Just game -> H.modify_ _ { position = clamp 0 (maxPosition game) n }
+      Just game -> do
+        let new = clamp 0 (maxPosition game) n
+        H.modify_ _ { position = new }
+        when (st.tab == CascadeTab && new /= st.position) do
+          syncCascadeMove game st.position new
+
+-- | A timeline move while the cascade is showing: reconcile the
+-- | animation state with the fact diff, redraw, and (re)start the frame
+-- | loop if anything is now in flight.
+syncCascadeMove :: forall o m. MonadAff m => Game -> Int -> Int -> H.HalogenM State Action () o m Unit
+syncCascadeMove game oldPos newPos = do
+  st <- H.get
+  let
+    count = game.result.playerCount
+    anim = syncAnim count game.depths
+      (facts (currentKnowledge game oldPos))
+      (facts (currentKnowledge game newPos))
+      st.cascadeAnim
+  H.modify_ _ { cascadeAnim = anim }
+  redrawCascade
+  when (animActive anim) scheduleAnimFrame
+
+-- | Schedule exactly one animation frame; its callback re-enters Halogen
+-- | as AnimTick. Self-perpetuating while animations are active — this is
+-- | the whole RAF→Halogen bridge.
+scheduleAnimFrame :: forall o m. MonadAff m => H.HalogenM State Action () o m Unit
+scheduleAnimFrame = do
+  st <- H.get
+  case st.animListener of
+    Just listener | not st.animPending -> do
+      H.modify_ _ { animPending = true }
+      void $ liftEffect $ RAF.requestAnimationFrame \_ -> HS.notify listener AnimTick
+    _ -> pure unit
+
+-- | Draw the moving layers for the current state (chrome untouched).
+redrawCascade :: forall o m. MonadAff m => H.HalogenM State Action () o m Unit
+redrawCascade = do
+  st <- H.get
+  case st.game, st.animListener of
+    Just game, Just listener | st.tab == CascadeTab ->
+      liftEffect $ redraw
+        { game
+        , position: st.position
+        , wiring: st.wiring
+        , anim: st.cascadeAnim
+        , onBar: \i -> HS.notify listener (Scrub i)
+        }
+    _, _ -> pure unit
+
+-- | Entering the cascade tab (or re-dealing while on it): wait a beat for
+-- | Halogen to have mounted the empty container, then draw chrome and the
+-- | current position from scratch.
+initCascadeView :: forall o m. MonadAff m => H.HalogenM State Action () o m Unit
+initCascadeView = do
+  H.liftAff (delay (Milliseconds 0.0))
+  st <- H.get
+  case st.game of
+    Nothing -> pure unit
+    Just game -> do
+      H.modify_ _ { cascadeAnim = emptyAnim }
+      liftEffect (renderChrome game.result.playerCount)
+      redrawCascade
 
 restartSameSeed :: forall o m. MonadAff m => H.HalogenM State Action () o m Unit
 restartSameSeed = do
@@ -136,13 +225,18 @@ startGame seedInt = do
       }
     snapshots = knowledgeTimeline count Watcher result.log
     positions = positionsTimeline count result.log
+    cascades = cascadeTimeline count Watcher result.log
+    depths = Map.unions (map _.depth cascades)
+    allEdges = Array.concatMap _.edges cascades
   H.modify_ _
-    { game = Just { seedInt, result, snapshots, positions }
+    { game = Just { seedInt, result, snapshots, positions, cascades, depths, allEdges }
     , position = 0
     , playing = false
     , seedInput = show seedInt
+    , cascadeAnim = emptyAnim
     }
   liftEffect (writeParamsToUrl seedInt (playerCountToInt count) st.movesInput)
+  when (st.tab == CascadeTab) initCascadeView
 
 -- | One global metronome; `Tick` decides whether anything moves. Simpler
 -- | than subscribing and unsubscribing around play state.
@@ -183,6 +277,33 @@ render st =
     case st.tab of
       AboutTab -> [ header st, aboutPage ]
       CodeTab -> [ header st, codePage ]
+      -- HATS owns everything under #cascade-view; Halogen renders it
+      -- childless and never patches inside
+      CascadeTab ->
+        [ header st
+        , HH.main [ HP.class_ (HH.ClassName "cascade-main") ]
+            [ HH.div [ HP.class_ (HH.ClassName "cascade-legend") ]
+                [ HH.span_ [ HH.text "● holds" ]
+                , HH.span_ [ HH.text "× ruled out" ]
+                , HH.span [ HP.class_ (HH.ClassName "legend-accent") ]
+                    [ HH.text "● in the envelope" ]
+                , HH.span [ HP.class_ (HH.ClassName "legend-accent") ]
+                    [ HH.text "⌐ showed one of these" ]
+                , HH.label [ HP.class_ (HH.ClassName "toggle") ]
+                    [ HH.input
+                        [ HP.type_ HP.InputCheckbox
+                        , HP.checked st.wiring
+                        , HE.onChecked ToggleWiring
+                        ]
+                    , HH.text "wiring"
+                    ]
+                ]
+            , HH.div [ HP.id "cascade-view" ] []
+            ]
+        , case st.game of
+            Nothing -> HH.text ""
+            Just game -> timelinePane game st.position st.playing
+        ]
       PlayTab ->
         [ header st
         , case st.game of
@@ -209,6 +330,7 @@ header st =
             [ HH.text "A Cluedo watcher who never sees a card — and solves the murder from metadata alone." ]
         , HH.nav [ HP.class_ (HH.ClassName "tabs") ]
             [ tabButton st PlayTab "Game"
+            , tabButton st CascadeTab "Cascade"
             , tabButton st AboutTab "About"
             , tabButton st CodeTab "The code"
             ]

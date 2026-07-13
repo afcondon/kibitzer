@@ -17,10 +17,13 @@ import Prelude
 import Data.Array as Array
 import Data.Map (Map)
 import Data.Maybe (Maybe, fromMaybe)
+import Halogen.Subscription as HS
 import Kibitzer.Board (Position)
+import Kibitzer.Cascade (CascadeEdge, CascadeFrame)
 import Kibitzer.Event (Event)
+import Kibitzer.Frontend.Cascade.Anim (CascadeAnim)
 import Kibitzer.Game (Result)
-import Kibitzer.Knowledge (Knowledge, emptyKnowledge)
+import Kibitzer.Knowledge (FactId, Knowledge, emptyKnowledge)
 import Kibitzer.Player (PlayerId, defaultPlayerCount)
 
 type Game =
@@ -28,9 +31,12 @@ type Game =
   , result :: Result
   , snapshots :: Array Knowledge
   , positions :: Array (Map PlayerId Position) -- index-aligned with snapshots
+  , cascades :: Array CascadeFrame -- also index-aligned; the watcher's derivation frames
+  , depths :: Map FactId Int -- frame-local derivation depth of every fact
+  , allEdges :: Array CascadeEdge -- the complete premise DAG of the finished game
   }
 
-data Tab = PlayTab | AboutTab | CodeTab
+data Tab = PlayTab | CascadeTab | AboutTab | CodeTab
 
 derive instance Eq Tab
 
@@ -42,6 +48,10 @@ type State =
   , position :: Int
   , playing :: Boolean
   , tab :: Tab
+  , cascadeAnim :: CascadeAnim
+  , animPending :: Boolean -- an animation frame is already scheduled
+  , animListener :: Maybe (HS.Listener Action)
+  , wiring :: Boolean -- keep settled provenance hairlines visible
   }
 
 data Action
@@ -59,6 +69,8 @@ data Action
   | JumpEnd
   | TogglePlay
   | Tick
+  | AnimTick
+  | ToggleWiring Boolean
 
 currentKnowledge :: Game -> Int -> Knowledge
 currentKnowledge game position =

@@ -537,6 +537,53 @@ h2 {
 
 .stats-table .stat-solved { font-weight: 700; }
 
+/* ---------- cascade tab ---------- */
+
+.cascade-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 2rem 0;
+  overflow-y: auto;
+}
+
+.cascade-legend {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding-bottom: 0.5rem;
+}
+
+.cascade-legend .legend-accent { color: var(--accent); }
+
+.cascade-legend .toggle {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  cursor: pointer;
+}
+
+.cascade-legend .toggle input { accent-color: var(--accent); }
+
+#cascade-view {
+  flex: 1;
+  width: 100%;
+  max-width: 900px;
+  min-height: 0;
+}
+
+#cascade-view svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* ---------- narrow screens ---------- */
 
 @media (max-width: 900px) {
