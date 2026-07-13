@@ -33,6 +33,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Set as Set
 import Hylograph.Transition.Tick (Progress, Transitioning)
 import Hylograph.Transition.Tick as Tick
+import Kibitzer.Describe (describeFact)
 import Kibitzer.Frontend.Cascade.Layout (claimCell)
 import Kibitzer.Knowledge (Claim(..), Fact, FactId(..))
 import Kibitzer.Player (PlayerCount)
@@ -41,8 +42,15 @@ data Glyph = GHolds | GLacks | GEnvIn | GEnvOut
 
 derive instance Eq Glyph
 
--- | A fact as a dot on the notebook: where it sits and what it looks like.
-type FactMark = { key :: String, x :: Number, y :: Number, glyph :: Glyph }
+-- | A fact as a dot on the notebook: where it sits, what it looks like,
+-- | and its provenance as a native hover tooltip.
+type FactMark =
+  { key :: String
+  , x :: Number
+  , y :: Number
+  , glyph :: Glyph
+  , tip :: String
+  }
 
 -- | A mark plus its animation state, resolved for one tick of rendering.
 type RenderMark =
@@ -88,6 +96,7 @@ mkMark count f =
         Lacks _ _ -> GLacks
         InEnvelope _ -> GEnvIn
         NotInEnvelope _ -> GEnvOut
+    , tip: describeFact f
     }
 
 -- | Beyond this many arrivals (a jump-to-end, not a step), animation is

@@ -64,7 +64,7 @@ component = H.mkComponent
       , cascadeAnim: emptyAnim
       , animPending: false
       , animListener: Nothing
-      , wiring: false
+      , wiring: true
       }
   , render
   , eval: H.mkEval (H.defaultEval { handleAction = handleAction, initialize = Just Initialize })

@@ -42,6 +42,7 @@ type EdgeLine =
   , x2 :: Number
   , y2 :: Number
   , opacity :: Number
+  , tip :: String
   }
 
 -- | A live disjunction: a spine in the shower's column spanning its
@@ -219,21 +220,35 @@ markTemplate rm =
           GEnvIn -> dot 7.5 accent
           GLacks -> cross faint
           GEnvOut -> cross accentFaint
+      , elem Title [ staticStr "textContent" rm.mark.tip ] []
       ]
 
+-- | Each edge is a visible hairline plus an invisible fat twin — a 1px
+-- | line is unhoverable, and the provenance tooltip is the whole point.
 edgesTree :: Array EdgeLine -> Tree
 edgesTree edges =
-  forEach "edges" Line edges _.key \e ->
-    elem Line
-      [ F.x1 e.x1
-      , F.y1 e.y1
-      , F.x2 e.x2
-      , F.y2 e.y2
-      , F.stroke ink
-      , F.strokeWidth 1.0
-      , F.opacity (show e.opacity)
+  forEach "edges" Group edges _.key \e ->
+    elem Group []
+      [ elem Line
+          [ F.x1 e.x1
+          , F.y1 e.y1
+          , F.x2 e.x2
+          , F.y2 e.y2
+          , F.stroke ink
+          , F.strokeWidth 1.0
+          , F.opacity (show e.opacity)
+          ]
+          []
+      , elem Line
+          [ F.x1 e.x1
+          , F.y1 e.y1
+          , F.x2 e.x2
+          , F.y2 e.y2
+          , F.stroke "transparent"
+          , F.strokeWidth 9.0
+          ]
+          [ elem Title [ staticStr "textContent" e.tip ] [] ]
       ]
-      []
 
 bracketsTree :: Array Bracket -> Tree
 bracketsTree brackets =

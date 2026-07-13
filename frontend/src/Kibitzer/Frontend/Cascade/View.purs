@@ -16,9 +16,9 @@ import Data.Set as Set
 import Effect (Effect)
 import Hylograph.Transition.Tick as Tick
 import Kibitzer.Cards (Card)
-import Kibitzer.Describe (describeSuggestion, eventRef)
+import Kibitzer.Describe (describeClaim, describeFact, describeSuggestion, eventRef)
 import Kibitzer.Event (EventId(..), eventIdToInt)
-import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, factKey, renderMarks)
+import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, renderMarks)
 import Kibitzer.Frontend.Cascade.Layout as L
 import Kibitzer.Frontend.Cascade.Scene (Bracket, EdgeLine, StripBar, Verdict(..), eventLabel, renderScene)
 import Kibitzer.Frontend.Types (Game, currentEvent, currentKnowledge)
@@ -66,11 +66,6 @@ redraw { game, position, wiring, anim, onBar } = renderScene
   allFacts :: Array Fact
   allFacts = fromMaybe [] (map facts (Array.last game.snapshots))
 
-  cellOf :: FactId -> Maybe { x :: Number, y :: Number }
-  cellOf fid@(FactId n) = do
-    f <- Array.index allFacts n
-    if f.id == fid then Just (L.claimCell count f.claim) else Nothing
-
   -- a hairline is bright while its conclusion flies in, then settles to
   -- faint persistent wiring (or nothing, with the toggle off)
   edges :: Array EdgeLine
@@ -78,8 +73,10 @@ redraw { game, position, wiring, anim, onBar } = renderScene
     let FactId toN = e.to
     let FactId fromN = e.from
     guardVisible toN
-    from <- cellOf e.from
-    to <- cellOf e.to
+    fromFact <- Array.index allFacts fromN
+    toFact <- Array.index allFacts toN
+    let from = L.claimCell count fromFact.claim
+    let to = L.claimCell count toFact.claim
     opacity <- case Map.lookup ("f" <> show toN) anim.entering of
       Just p -> Just (Tick.lerpClamped 0.0 0.75 (Tick.easeOutCubic (clamp 0.0 1.0 p)))
       Nothing -> if wiring then Just 0.12 else Nothing
@@ -90,6 +87,7 @@ redraw { game, position, wiring, anim, onBar } = renderScene
       , x2: to.x
       , y2: to.y
       , opacity
+      , tip: describeClaim fromFact.claim <> "  ⟶  " <> describeFact toFact
       }
     where
     guardVisible n = if n < visibleCount then Just unit else Nothing
