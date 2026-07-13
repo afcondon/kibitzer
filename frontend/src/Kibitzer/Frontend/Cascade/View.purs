@@ -11,17 +11,18 @@ import Prelude
 import Data.Array as Array
 import Data.Int as Int
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Set as Set
 import Effect (Effect)
 import Hylograph.Transition.Tick as Tick
 import Kibitzer.Cards (Card)
-import Kibitzer.Event (eventIdToInt)
+import Kibitzer.Describe (describeSuggestion, eventRef)
+import Kibitzer.Event (EventId(..), eventIdToInt)
 import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, factKey, renderMarks)
 import Kibitzer.Frontend.Cascade.Layout as L
-import Kibitzer.Frontend.Cascade.Scene (Bracket, EdgeLine, StripBar, eventLabel, renderScene)
+import Kibitzer.Frontend.Cascade.Scene (Bracket, EdgeLine, StripBar, Verdict(..), eventLabel, renderScene)
 import Kibitzer.Frontend.Types (Game, currentEvent, currentKnowledge)
-import Kibitzer.Knowledge (Disjunction(..), Fact, FactId(..), facts)
+import Kibitzer.Knowledge (Disjunction(..), Fact, FactId(..), envelopeIn, facts, solutionIfKnown)
 import Kibitzer.Player (PlayerId(..))
 
 redraw
@@ -37,13 +38,29 @@ redraw { game, position, wiring, anim, onBar } = renderScene
   , edges
   , brackets
   , rail: eventLabel position (currentEvent game position)
+  , verdict
   , strip
   , onBar
   }
   where
   count = game.result.playerCount
-  visible = facts (currentKnowledge game position)
+  knowledge = currentKnowledge game position
+  visible = facts knowledge
   visibleCount = Array.length visible
+
+  -- the credit line: the full solution once the envelope is determined
+  -- (with the moment it happened), quiet progress until then
+  verdict :: Verdict
+  verdict = case solutionIfKnown knowledge of
+    Just solution ->
+      Solved
+        ( "The watcher has it: " <> describeSuggestion solution
+            <> case Array.findIndex (isJust <<< solutionIfKnown) game.snapshots of
+              Just p | p >= 1 -> " — known since " <> eventRef (EventId (p - 1)) <> "."
+              _ -> "."
+        )
+    Nothing ->
+      Working ("Envelope determined: " <> show (Set.size (envelopeIn knowledge)) <> " of 3.")
 
   -- every fact of the finished game, indexable by dense FactId
   allFacts :: Array Fact

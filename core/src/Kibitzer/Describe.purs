@@ -108,7 +108,12 @@ describeFact { claim, justification } =
     <> describeClaim claim
     <> case justification.origins of
       [] -> ""
-      [ origin ] -> " (resolving the card shown at " <> eventRef origin <> ")"
+      -- only a singleton resolution truly *resolves* its show-event;
+      -- the counting rules merely draw on theirs
+      [ origin ]
+        | justification.rule == SingletonDisjunction ->
+            " (resolving the card shown at " <> eventRef origin <> ")"
+      [ origin ] -> " (drawing on the card shown at " <> eventRef origin <> ")"
       origins ->
         " (drawing on the cards shown at "
           <> intercalate ", " (map eventRef origins)

@@ -7,6 +7,7 @@ module Kibitzer.Frontend.Cascade.Scene
   ( EdgeLine
   , Bracket
   , StripBar
+  , Verdict(..)
   , SceneInput
   , renderChrome
   , renderScene
@@ -54,9 +55,14 @@ type SceneInput =
   , edges :: Array EdgeLine
   , brackets :: Array Bracket
   , rail :: String
+  , verdict :: Verdict
   , strip :: Array StripBar
   , onBar :: Int -> Effect Unit
   }
+
+-- | The watcher's standing at the current position, shown above the
+-- | sparkline: quiet progress while working, full credit once solved.
+data Verdict = Working String | Solved String
 
 ink :: String
 ink = "#141414"
@@ -86,14 +92,21 @@ renderScene input = do
   _ <- rerender "#cascade-edges" (edgesTree input.edges)
   _ <- rerender "#cascade-brackets" (bracketsTree input.brackets)
   _ <- rerender "#cascade-marks" (marksTree input.marks)
-  _ <- rerender "#cascade-rail" (railTree input.rail)
+  _ <- rerender "#cascade-rail" (railTree input.rail input.verdict)
   _ <- rerender "#cascade-strip" (stripTree input.onBar input.strip)
   pure unit
 
 -- | Empty every moving layer (leaving chrome) — used on re-deal.
 clearScene :: Effect Unit
 clearScene = renderScene
-  { marks: [], edges: [], brackets: [], rail: "", strip: [], onBar: \_ -> pure unit }
+  { marks: []
+  , edges: []
+  , brackets: []
+  , rail: ""
+  , verdict: Working ""
+  , strip: []
+  , onBar: \_ -> pure unit
+  }
 
 chromeTree :: PlayerCount -> Tree
 chromeTree count =
@@ -254,16 +267,32 @@ bracketsTree brackets =
     in
       elem Group [] (Array.cons spine (map tick b.ys))
 
-railTree :: String -> Tree
-railTree label =
-  elem Text
+railTree :: String -> Verdict -> Tree
+railTree label verdict =
+  elem Group []
+    [ elem Text
+        [ F.x L.railAnchor.x
+        , F.y (L.railAnchor.y + 4.0)
+        , F.textAnchor "start"
+        , F.fontSize "13"
+        , F.fontWeight "500"
+        , F.fill ink
+        , staticStr "textContent" label
+        ]
+        []
+    , case verdict of
+        Working text -> verdictText text "#767676" "400"
+        Solved text -> verdictText text accent "600"
+    ]
+  where
+  verdictText text colour weight = elem Text
     [ F.x L.railAnchor.x
-    , F.y (L.railAnchor.y + 4.0)
+    , F.y (L.stripTop - 12.0)
     , F.textAnchor "start"
     , F.fontSize "13"
-    , F.fontWeight "500"
-    , F.fill ink
-    , staticStr "textContent" label
+    , F.fontWeight weight
+    , F.fill colour
+    , staticStr "textContent" text
     ]
     []
 
