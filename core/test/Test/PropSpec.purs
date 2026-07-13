@@ -48,6 +48,7 @@ runGame seedInt countInt =
       , seed: mkSeed seedInt
       , policy: randomLegalPolicy
       , maxTurns: 400
+      , movement: false
       }
     hands = case Array.head result.log of
       Just (GameDealt d) -> d.hands

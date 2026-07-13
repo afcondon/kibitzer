@@ -4,6 +4,7 @@ import Prelude
 
 import Effect (Effect)
 import Effect.Console (log)
+import Test.BoardSpec (runBoardTests)
 import Test.CardsSpec (runCardsTests)
 import Test.DealSpec (runDealTests)
 import Test.GameSpec (runGameTests)
@@ -17,6 +18,7 @@ main = do
   runCardsTests
   runRngTests
   runDealTests
+  runBoardTests
   runKnowledgeTests
   runGameTests
   runWatcherTests

@@ -54,6 +54,7 @@ handOf game p = case Array.head game.result.log of
 
 seatStateClasses :: Game -> Int -> PlayerId -> Array String
 seatStateClasses game position p = case currentEvent game position of
+  Just (Moved { player }) | player == p -> [ "moving" ]
   Just (SuggestionMade { by }) | by == p -> [ "suggesting" ]
   Just (Passed { player }) | player == p -> [ "passing" ]
   Just (CardShown { by }) | by == p -> [ "showing" ]
@@ -79,6 +80,7 @@ stageChips = case _ of
   Passed { suggestion } -> [ suggestionChips suggestion ]
   CardShown { suggestion, card } -> [ suggestionChips suggestion, shownCard card ]
   AccusationMade { accusation } -> [ suggestionChips accusation ]
+  Moved _ -> []
   GameDealt _ -> []
 
 shownCard :: forall w a. Card -> HH.HTML w a

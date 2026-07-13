@@ -60,6 +60,10 @@ learn (Tuple source observation) knowledge =
           Nothing -> sized
           Just { player, hand } ->
             conclude OwnHand (map (Holds player) (Set.toUnfoldable hand)) sized
+    -- Deliberately learns nothing: movement is public, but none of the
+    -- deduction rules use it — a token's path is a hunch, not a fact,
+    -- and the notebook must never hold hunches.
+    ObsMoved _ -> knowledge
     ObsSuggestion _ -> knowledge
     ObsPassed { player, suggestion } ->
       conclude PassImpliesLacks

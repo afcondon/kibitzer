@@ -23,6 +23,7 @@ seed42 = simulate
   , seed: mkSeed 42
   , policy: randomLegalPolicy
   , maxTurns: 200
+  , movement: false
   }
 
 runGameTests :: Effect Unit

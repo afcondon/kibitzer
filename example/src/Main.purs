@@ -44,6 +44,7 @@ run count seedInt = do
       , seed: mkSeed seedInt
       , policy: randomLegalPolicy
       , maxTurns: 200
+      , movement: false
       }
   log ("kibitzer — seed " <> show seedInt <> "\n")
 

@@ -26,6 +26,7 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
+import Kibitzer.Board (Position)
 import Kibitzer.Cards (Card)
 import Kibitzer.Event (Event(..), EventId(..), Log)
 import Kibitzer.Player (PlayerCount, PlayerId)
@@ -45,6 +46,7 @@ data Observation
       , handSizes :: Map PlayerId Int
       , ownHand :: Maybe { player :: PlayerId, hand :: Set Card }
       }
+  | ObsMoved { player :: PlayerId, roll :: Int, position :: Position }
   | ObsSuggestion { by :: PlayerId, suggestion :: Suggestion }
   | ObsPassed { player :: PlayerId, suggestion :: Suggestion }
   | ObsShowed { by :: PlayerId, to :: PlayerId, suggestion :: Suggestion, card :: Maybe Card }
@@ -66,6 +68,8 @@ observe perspective = case _ of
           Watcher -> Nothing
           PlayerView p -> map (\hand -> { player: p, hand }) (Map.lookup p hands)
       }
+  -- Movement happens on the open board: identical for every perspective.
+  Moved m -> ObsMoved m
   SuggestionMade s -> ObsSuggestion s
   Passed p -> ObsPassed p
   CardShown { by, to, card, suggestion } ->

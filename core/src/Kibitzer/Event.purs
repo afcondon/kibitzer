@@ -18,6 +18,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Show.Generic (genericShow)
+import Kibitzer.Board (Position)
 import Kibitzer.Cards (Card)
 import Kibitzer.Player (PlayerCount, PlayerId)
 import Kibitzer.Suggestion (Solution, Suggestion)
@@ -35,6 +36,7 @@ eventIdToInt (EventId i) = i
 
 data Event
   = GameDealt { players :: PlayerCount, hands :: Map PlayerId (Set Card), solution :: Solution }
+  | Moved { player :: PlayerId, roll :: Int, position :: Position }
   | SuggestionMade { by :: PlayerId, suggestion :: Suggestion }
   | Passed { player :: PlayerId, suggestion :: Suggestion }
   | CardShown { by :: PlayerId, to :: PlayerId, card :: Card, suggestion :: Suggestion }

@@ -106,6 +106,7 @@ startGame seedInt = do
       , seed: mkSeed seedInt
       , policy: randomLegalPolicy
       , maxTurns: 200
+      , movement: false
       }
     snapshots = knowledgeTimeline defaultPlayerCount Watcher result.log
   H.modify_ _

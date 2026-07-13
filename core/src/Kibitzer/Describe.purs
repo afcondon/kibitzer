@@ -15,6 +15,7 @@ import Prelude
 
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String.CodeUnits (charAt, singleton)
+import Kibitzer.Board (Position(..))
 import Kibitzer.Cards (Card(..), roomName, suspectName, weaponName)
 import Kibitzer.Event (Event(..), EventId, eventIdToInt)
 import Kibitzer.Knowledge (Claim(..), Fact, Rule(..))
@@ -45,6 +46,18 @@ describeEvent = case _ of
     "Cards dealt to "
       <> show (playerCountToInt players)
       <> " players; three sealed in the envelope."
+  Moved { player, roll, position } -> case position of
+    InRoom room ->
+      playerName player <> " rolls " <> show roll <> " and arrives in the " <> roomName room <> "."
+    EnRoute { to, remaining } ->
+      playerName player
+        <> " rolls "
+        <> show roll
+        <> " and is en route to the "
+        <> roomName to
+        <> " — "
+        <> show remaining
+        <> " steps short."
   SuggestionMade { by, suggestion } ->
     playerName by <> " suggests " <> describeSuggestion suggestion <> "."
   Passed { player } ->
