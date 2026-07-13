@@ -66,6 +66,8 @@ data Rule
   | UniqueOwner -- a held card is nowhere else: not in other hands, not in the envelope
   | HandComplete -- a full hand excludes every other card
   | LastCandidateHand -- a dealt card only one player can still hold
+  | DisjunctionCapacity -- free hand slots fully committed to disjoint disjunctions
+  | DisjunctionPigeonhole -- distinct showers sharing a candidate pool exhaust it
   | EnvelopeByElimination -- a card no player holds must be in the envelope
   | CategoryCount -- one envelope slot per category, counted both ways
   | EnvelopeExcludesHands -- an envelope card is in no hand

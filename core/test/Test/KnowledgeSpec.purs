@@ -124,6 +124,58 @@ runKnowledgeTests = do
     assert (Set.member (SuspectCard Scarlett) (holdsOf k (PlayerId 3)))
     assert (Array.any (\f -> f.justification.rule == LastCandidateHand) (facts k))
 
+  log "Knowledge: committed hand slots exclude everything unreachable"
+  do
+    -- player 3 (hand size 4): three cards seen, one free slot, one live
+    -- disjunction — the fourth card must be among its candidates
+    let
+      seen card suggestion = ObsShowed
+        { by: PlayerId 3, to: PlayerId 0, suggestion, card: Just card }
+      k = feed
+        [ ObsDealt
+            { players: defaultPlayerCount
+            , handSizes: handSizes defaultPlayerCount
+            , ownHand: Nothing
+            }
+        , seen (SuspectCard Scarlett) (sugg Scarlett Knife Kitchen)
+        , seen (WeaponCard Knife) (sugg Scarlett Knife Kitchen)
+        , seen (RoomCard Kitchen) (sugg Scarlett Knife Kitchen)
+        , ObsShowed
+            { by: PlayerId 3
+            , to: PlayerId 0
+            , suggestion: sugg Mustard Rope Study
+            , card: Nothing
+            }
+        ]
+    -- lacks everything except 3 seen cards + 3 live candidates
+    assertEqual { actual: Set.size (lacksOf k (PlayerId 3)), expected: 15 }
+    assert (Set.member (SuspectCard Peacock) (lacksOf k (PlayerId 3)))
+    assert (not (Set.member (WeaponCard Rope) (lacksOf k (PlayerId 3))))
+    assert (Array.any (\f -> f.justification.rule == DisjunctionCapacity) (facts k))
+
+  log "Knowledge: two showers sharing a two-card pool exhaust it"
+  do
+    let
+      k = feed
+        [ ObsShowed
+            { by: PlayerId 1
+            , to: PlayerId 0
+            , suggestion: sugg White Wrench Kitchen
+            , card: Nothing
+            }
+        , pass 1 (sugg Scarlett Knife Kitchen) -- prunes 1's pool to {White, Wrench}
+        , ObsShowed
+            { by: PlayerId 2
+            , to: PlayerId 0
+            , suggestion: sugg White Wrench Ballroom
+            , card: Nothing
+            }
+        , pass 2 (sugg Scarlett Knife Ballroom) -- prunes 2's pool to {White, Wrench}
+        ]
+    assert (Set.member (SuspectCard White) (envelopeOut k))
+    assert (Set.member (WeaponCard Wrench) (envelopeOut k))
+    assert (Array.any (\f -> f.justification.rule == DisjunctionPigeonhole) (facts k))
+
   log "Knowledge: saturate is idempotent on saturated states"
   do
     let

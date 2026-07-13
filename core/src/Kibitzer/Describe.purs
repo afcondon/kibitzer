@@ -88,6 +88,8 @@ ruleName = case _ of
   UniqueOwner -> "held elsewhere"
   HandComplete -> "hand is full"
   LastCandidateHand -> "last possible hand"
+  DisjunctionCapacity -> "hand slots spoken for"
+  DisjunctionPigeonhole -> "showers exhaust the pool"
   EnvelopeByElimination -> "held by no one"
   CategoryCount -> "one per category"
   EnvelopeExcludesHands -> "in the envelope"

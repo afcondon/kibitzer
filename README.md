@@ -109,13 +109,17 @@ The engine is deliberately *sound but not complete*: it propagates, it
 does not SAT-solve. We measured exactly what that costs by having Z3
 play the **optimal watcher** (`smt/optimal_watcher.py` — the public
 transcript as finite-domain constraints; a fact is certain iff its
-negation is UNSAT). Over 800 games: the engine captures 92–96% of what
-is logically certain, Z3 agrees with every one of its ~78k certainties
-(an independent soundness check), and the board-protects-the-players
-finding survives even the perfect adversary (optimal solve rate at six
-players: 40% classic vs 24% with the board). Details in
-`docs/formal-methods-follow-on.md`. The soundness half is what the demo
-needs — the notebook never lies — and it is machine-checked:
+negation is UNSAT). The first measurement showed a real gap, which two
+Sudoku-flavoured counting rules then closed (`DisjunctionCapacity`,
+`DisjunctionPigeonhole` — see `Kibitzer.Infer`): the engine now
+captures 96–99% of what is logically certain and matches the optimal
+watcher's solve rate in six of eight configurations. Z3 agrees with
+every certainty it ever emits (an independent soundness check over 800
+games), and the board-protects-the-players finding survives even the
+perfect adversary (optimal solve rate at six players: 30% classic vs
+12% with the board). Details in `docs/formal-methods-follow-on.md`.
+The soundness half is what the demo needs — the notebook never lies —
+and it is machine-checked:
 
 ## The theorems (property tests)
 
@@ -176,28 +180,28 @@ longest journey takes at most seven of your turns.
 
 ```
 players moves   mean-events mean-suggs mean-win-turn watcher-facts env-known/3  solved% unfinished
-3       off            82.8       34.4          35.4          54.0         0.9       2%          0
-3       on             99.1       24.3          41.1          43.0         0.9       6%          0
-4       off            86.5       32.2          33.2          74.2         1.1       6%          0
-4       on            109.6       25.0          42.6          65.3         1.2      10%          0
-5       off            98.8       33.1          34.1          98.7         1.6      14%          0
-5       on            122.2       26.4          44.7          85.6         1.1       7%          0
-6       off           109.8       33.4          34.4         121.7         1.8      31%          0
-6       on            132.4       26.9          45.8         108.7         1.3      12%          0
+3       off            81.6       33.9          34.9          54.0         1.0       2%          0
+3       on             97.8       23.9          40.6          42.9         1.0       6%          0
+4       off            83.9       31.2          32.2          75.7         1.2       9%          0
+4       on            107.8       24.6          41.8          66.9         1.3      11%          0
+5       off            95.8       32.1          33.1         100.5         1.6      14%          0
+5       on            118.8       25.7          43.2          90.9         1.3      13%          0
+6       off           107.3       32.7          33.7         125.5         1.9      28%          0
+6       on            126.7       25.7          44.0         112.3         1.5      12%          0
 ```
 
 Two findings. **Table size is the watcher's real ally**: at six players
-the watcher fully solves 31% of classic games (2% at three), because
+the watcher fully solves 28% of classic games (2% at three), because
 every suggestion sweeps more hands — more passes, more facts, and
 six three-card hands fill up fast. **The board mostly protects the
-players**: at five and six players movement roughly halves the watcher's
+players**: at six players movement more than halves the watcher's
 solve rate. Suggestions become scarcer per turn and — more subtly —
 room-constrained: players suggest whatever room they could reach, so the
 same nearby rooms recur and each pass repeats more of what the watcher
 already knew. (At three and four players the effect is small and runs
-slightly the other way — longer games give the few hands time to be
-pinned down.) Metadata inference thrives on *varied* questions; the
-board forces repetitive ones.
+the other way — longer games give the few hands time to be pinned
+down.) Metadata inference thrives on *varied* questions; the board
+forces repetitive ones.
 
 ## Workspace layout
 

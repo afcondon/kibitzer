@@ -66,11 +66,11 @@ which is more interesting. A hundred seeded games per configuration:"""
         , statsTable
         , para
             """Two findings. Table size is the watcher's real ally: at six
-players the watcher fully names all three envelope cards in 31% of
+players the watcher fully names all three envelope cards in 28% of
 classic games (versus 2% at three players) — every suggestion sweeps
 more hands, and six three-card hands fill up fast. And the board mostly
-protects the players: at five and six players movement roughly halves
-the watcher's solve rate. Suggestions get scarcer per turn, and the
+protects the players: at six players movement more than halves the
+watcher's solve rate. Suggestions get scarcer per turn, and the
 room slot stops being a free choice — players suggest whatever room
 they could reach, the same nearby rooms recur, and each pass repeats
 things the watcher already knew. Metadata inference thrives on varied
@@ -78,14 +78,17 @@ questions; the board forces repetitive ones."""
         ]
     , section "Honesty"
         [ para
-            """The inference engine is sound but deliberately not complete: it
-propagates certainties and never guesses, so a cleverer watcher (or a
-SAT solver) could squeeze out a little more. Simplifications are
+            """The inference engine is sound and very nearly complete: we had
+the Z3 theorem prover play the perfect watcher over the same 800 games,
+and this engine derives 96–99% of everything logically certain,
+matching the perfect watcher's solve rate in six of the eight
+configurations above — with zero disagreements. Simplifications are
 documented in the code and the README: no secret passages, no dragging
 the named suspect's token, committed journeys, and the stock players
 suggest at random rather than strategically. The soundness claim — the
 notebook never lies, from any seat, at any moment — is enforced by
-property tests over thousands of random games."""
+property tests over thousands of random games, and independently by
+Z3."""
         , para
             """Written in PureScript (a pure Halogen app over a pure game core);
 MIT licensed."""
@@ -119,12 +122,12 @@ statsTable =
     ]
 
   rows =
-    [ { players: "3", board: "off", suggs: "34.4", facts: "54.0", solved: "2%" }
-    , { players: "3", board: "on", suggs: "24.3", facts: "43.0", solved: "6%" }
-    , { players: "4", board: "off", suggs: "32.2", facts: "74.2", solved: "6%" }
-    , { players: "4", board: "on", suggs: "25.0", facts: "65.3", solved: "10%" }
-    , { players: "5", board: "off", suggs: "33.1", facts: "98.7", solved: "14%" }
-    , { players: "5", board: "on", suggs: "26.4", facts: "85.6", solved: "7%" }
-    , { players: "6", board: "off", suggs: "33.4", facts: "121.7", solved: "31%" }
-    , { players: "6", board: "on", suggs: "26.9", facts: "108.7", solved: "12%" }
+    [ { players: "3", board: "off", suggs: "33.9", facts: "54.0", solved: "2%" }
+    , { players: "3", board: "on", suggs: "23.9", facts: "42.9", solved: "6%" }
+    , { players: "4", board: "off", suggs: "31.2", facts: "75.7", solved: "9%" }
+    , { players: "4", board: "on", suggs: "24.6", facts: "66.9", solved: "11%" }
+    , { players: "5", board: "off", suggs: "32.1", facts: "100.5", solved: "14%" }
+    , { players: "5", board: "on", suggs: "25.7", facts: "90.9", solved: "13%" }
+    , { players: "6", board: "off", suggs: "32.7", facts: "125.5", solved: "28%" }
+    , { players: "6", board: "on", suggs: "25.7", facts: "112.3", solved: "12%" }
     ]

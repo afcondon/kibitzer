@@ -3,7 +3,53 @@
 *Status: SMT experiment **done** (results below, 2026-07-13); TLA+ and
 Lean still planned.*
 
-## SMT results (800 games: seeds 1–100 × players 3–6 × movement off/on)
+## SMT results, round 2: the gap closed (and a theorem earned its keep)
+
+The first measurement (kept below) priced the gap; two new deduction
+rules then claimed most of it:
+
+- **`DisjunctionCapacity`** — a player with f free hand slots and f
+  pairwise-disjoint unresolved show-disjunctions has every unknown card
+  spoken for. Conclusion taken as the *intersection over all* size-f
+  disjoint families' candidate unions — see below for why.
+- **`DisjunctionPigeonhole`** — two different players each showed from
+  the same two-card pool: both cards are in hands, neither in the
+  envelope. (The named `ruleUnrefutedSuggestion` turned out to already
+  be subsumed: per-card, EnvelopeByElimination + LastCandidateHand
+  cover the envelope-or-suggester residual. The real gap was counting.)
+
+After (same corpus recipe, players now also smarter since they share
+the engine — game trajectories changed):
+
+```
+players  moves  engine-certs  optimal-certs    gap  engine-solved%  optimal-solved%  unsound
+      3    off          54.0           56.1    2.1              2%               2%        0
+      3     on          42.9           43.8    0.9              6%               6%        0
+      4    off          75.7           78.0    2.2              9%               9%        0
+      4     on          66.9           68.6    1.7             11%              11%        0
+      5    off         100.5          102.0    1.5             14%              14%        0
+      5     on          90.9           92.1    1.2             13%              13%        0
+      6    off         125.5          128.0    2.5             28%              30%        0
+      6     on         112.3          113.9    1.6             12%              12%        0
+```
+
+96–99% of optimal, solve rate equal to the perfect watcher in six of
+eight configurations, still zero unsound certainties.
+
+**The war story worth keeping**: the first cut of DisjunctionCapacity
+used a *greedy* disjoint-family search and passed its unit tests — but
+the player-⊇-watcher property test failed roughly one run in three.
+The hunt found the mechanism: a better-informed player prunes candidate
+pools differently, greedy picks a different (smaller) family, and the
+inference silently vanishes for the mind that knew *more*. Even an
+exact maximum-family search can't fix it (the conclusion depends on
+which family you pick); the provably view-monotone form intersects the
+unions over *every* qualifying family — any watcher family survives,
+pruned but still disjoint, into every better-informed view. A rule can
+be perfectly sound and still break "more information never hurts";
+only the property test caught it.
+
+## SMT results, round 1 (before the counting rules)
 
 `spago run -p kibitzer-example -- corpus 100 > smt/corpus.jsonl`, then
 `smt/optimal_watcher.py` (Z3, ~43s for all 800 games):

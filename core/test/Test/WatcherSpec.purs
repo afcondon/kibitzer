@@ -24,18 +24,19 @@ runWatcherTests = do
     result = seed42
     watcher = knowledgeAt defaultPlayerCount Watcher (Array.length result.log) result.log
 
-  assertEqual { actual: factCount watcher, expected: 70 }
+  assertEqual { actual: factCount watcher, expected: 51 }
   assert (consistent watcher)
 
   -- The watcher placed these cards exactly, without seeing any of them.
+  -- (Since the capacity/pigeonhole rules, players solve sooner — the
+  -- game now ends at E80, so the watcher gets fewer events to mine.)
   assert (Set.member (RoomCard BilliardRoom) (holdsOf watcher (PlayerId 1)))
   assert (Set.member (SuspectCard White) (holdsOf watcher (PlayerId 2)))
   assert (Set.member (WeaponCard Wrench) (holdsOf watcher (PlayerId 2)))
-  assert (Set.member (SuspectCard Peacock) (holdsOf watcher (PlayerId 3)))
   assert (Set.member (RoomCard Library) (holdsOf watcher (PlayerId 0)))
 
-  -- At this seed the watcher gets close but does not fully solve it:
-  -- ten cards ruled out of the envelope, none yet ruled in.
+  -- At this seed the watcher does not fully solve it: four cards ruled
+  -- out of the envelope, none yet ruled in.
   assertEqual { actual: Set.size (envelopeIn watcher), expected: 0 }
-  assertEqual { actual: Set.size (envelopeOut watcher), expected: 10 }
+  assertEqual { actual: Set.size (envelopeOut watcher), expected: 4 }
   assertEqual { actual: solutionIfKnown watcher, expected: Nothing }

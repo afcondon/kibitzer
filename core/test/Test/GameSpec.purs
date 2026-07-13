@@ -31,9 +31,9 @@ runGameTests :: Effect Unit
 runGameTests = do
   log "Game: seed-42 golden transcript"
   let result = seed42
-  assertEqual { actual: Array.length result.log, expected: 96 }
-  assertEqual { actual: result.winner, expected: Just (PlayerId 3) }
-  assertEqual { actual: result.turns, expected: 40 }
+  assertEqual { actual: Array.length result.log, expected: 81 }
+  assertEqual { actual: result.winner, expected: Just (PlayerId 0) }
+  assertEqual { actual: result.turns, expected: 33 }
   assertEqual
     { actual: result.solution
     , expected: { suspect: Mustard, weapon: Revolver, room: Study }
@@ -63,7 +63,7 @@ runGameTests = do
     { actual: Array.last result.log
     , expected: Just
         ( AccusationMade
-            { by: PlayerId 3
+            { by: PlayerId 0
             , accusation: result.solution
             , correct: true
             }

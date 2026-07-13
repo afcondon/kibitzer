@@ -112,6 +112,8 @@ allRules =
   , ruleUniqueOwner
   , ruleHandComplete
   , ruleLastCandidateHand
+  , ruleDisjunctionCapacity
+  , ruleDisjunctionPigeonhole
   , ruleEnvelopeByElimination
   , ruleCategoryCount
   , ruleEnvelopeExcludesHands
@@ -168,6 +170,85 @@ ruleLastCandidateHand knowledge@(Knowledge k) = do
   case Array.filter (\p -> not (Set.member c (lacksOf knowledge p))) (allPlayers k.playerCount) of
     [ p ] -> pure { claim: Holds p c, rule: LastCandidateHand, origin: Nothing }
     _ -> []
+
+-- | A player with f free hand slots and f pairwise-disjoint unresolved
+-- | disjunctions has every unknown card spoken for: each unresolved
+-- | disjunction (no known candidate — pruning guarantees it) must be
+-- | satisfied by a distinct unknown card, so the hand lies inside the
+-- | family's candidate union.
+-- |
+-- | Crucially, EVERY size-f disjoint family yields that entailment
+-- | simultaneously, so the hand lies inside the *intersection* of their
+-- | unions — and it must be the intersection, not one greedily chosen
+-- | family: a better-informed mind prunes the pools differently, and a
+-- | single-family conclusion can vary with the choice, breaking the
+-- | player-⊇-watcher theorem. Intersecting over all families restores it
+-- | (any watcher family survives, pruned but disjoint, into every
+-- | better-informed view).
+ruleDisjunctionCapacity :: Knowledge -> Array Derived
+ruleDisjunctionCapacity knowledge@(Knowledge k) = do
+  p /\ size <- Map.toUnfoldable k.handSizes :: Array (PlayerId /\ Int)
+  let held = holdsOf knowledge p
+  let free = size - Set.size held
+  guard (free > 0)
+  let
+    pools = Array.nub
+      ( Array.mapMaybe
+          ( case _ of
+              Disjunction d | not d.resolved, d.player == p -> Just d.candidates
+              _ -> Nothing
+          )
+          k.disjunctions
+      )
+  case reachableUnion free pools of
+    Nothing -> []
+    Just reachable -> do
+      c <- Array.filter
+        (\c -> not (Set.member c held) && not (Set.member c reachable))
+        allCards
+      pure { claim: Lacks p c, rule: DisjunctionCapacity, origin: Nothing }
+
+-- | The intersection of the candidate unions over every pairwise-disjoint
+-- | family of exactly `size` pools; Nothing when no such family exists.
+reachableUnion :: Int -> Array (Set Card) -> Maybe (Set Card)
+reachableUnion size pools = case familyUnions size pools of
+  [] -> Nothing
+  unions -> Just (foldl Set.intersection (Set.unions unions) unions)
+
+-- | Candidate unions of all size-k pairwise-disjoint subfamilies.
+familyUnions :: Int -> Array (Set Card) -> Array (Set Card)
+familyUnions 0 _ = [ Set.empty ]
+familyUnions k pools = case Array.uncons pools of
+  Nothing -> []
+  Just { head: s, tail } ->
+    let
+      compatible = Array.filter (\t -> Set.isEmpty (Set.intersection s t)) tail
+      taking = map (Set.union s) (familyUnions (k - 1) compatible)
+      skipping = familyUnions k tail
+    in
+      taking <> skipping
+
+-- | Two *different* players each showed a card from the same two-card
+-- | candidate pool. A card sits in exactly one hand, so the pool is
+-- | exhausted: both cards are in hands, and neither is in the envelope.
+-- | (The k=3 generalisation exists; pairs already close most of the gap.)
+ruleDisjunctionPigeonhole :: Knowledge -> Array Derived
+ruleDisjunctionPigeonhole (Knowledge k) = do
+  let
+    narrow = Array.mapMaybe
+      ( case _ of
+          Disjunction d | not d.resolved, Set.size d.candidates <= 2 ->
+            Just { player: d.player, candidates: d.candidates }
+          _ -> Nothing
+      )
+      k.disjunctions
+  Tuple i first <- Array.mapWithIndex Tuple narrow
+  second <- Array.drop (i + 1) narrow
+  guard (first.player /= second.player)
+  let pool = Set.union first.candidates second.candidates
+  guard (Set.size pool == 2)
+  c <- Set.toUnfoldable pool
+  pure { claim: NotInEnvelope c, rule: DisjunctionPigeonhole, origin: Nothing }
 
 ruleEnvelopeByElimination :: Knowledge -> Array Derived
 ruleEnvelopeByElimination knowledge@(Knowledge k) = do
