@@ -14,20 +14,25 @@ module Kibitzer.Frontend.Types
 import Prelude
 
 import Data.Array as Array
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Map (Map)
+import Data.Maybe (Maybe, fromMaybe)
+import Kibitzer.Board (Position)
 import Kibitzer.Event (Event)
 import Kibitzer.Game (Result)
 import Kibitzer.Knowledge (Knowledge, emptyKnowledge)
-import Kibitzer.Player (defaultPlayerCount)
+import Kibitzer.Player (PlayerId, defaultPlayerCount)
 
 type Game =
   { seedInt :: Int
   , result :: Result
   , snapshots :: Array Knowledge
+  , positions :: Array (Map PlayerId Position) -- index-aligned with snapshots
   }
 
 type State =
   { seedInput :: String
+  , playersInput :: Int
+  , movesInput :: Boolean
   , game :: Maybe Game
   , position :: Int
   , playing :: Boolean
@@ -36,6 +41,8 @@ type State =
 data Action
   = Initialize
   | SetSeedInput String
+  | SetPlayers String
+  | ToggleMoves Boolean
   | NewGame
   | RandomSeed
   | Scrub Int

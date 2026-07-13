@@ -33,9 +33,10 @@ import Kibitzer.Game (simulate)
 import Kibitzer.Infer (knowledgeTimeline)
 import Kibitzer.Knowledge (factCount)
 import Kibitzer.Observe (Perspective(..))
-import Kibitzer.Player (defaultPlayerCount)
+import Kibitzer.Player (defaultPlayerCount, mkPlayerCount, playerCountToInt)
 import Kibitzer.Policy (randomLegalPolicy)
 import Kibitzer.Rng (mkSeed)
+import Kibitzer.Track (positionsTimeline)
 import Web.HTML (window)
 import Web.HTML.History (DocumentTitle(..), URL(..))
 import Web.HTML.History as History
@@ -46,6 +47,8 @@ component :: forall q i o m. MonadAff m => H.Component q i o m
 component = H.mkComponent
   { initialState: \_ ->
       { seedInput: "42"
+      , playersInput: 4
+      , movesInput: false
       , game: Nothing
       , position: 0
       , playing: false
@@ -58,14 +61,24 @@ handleAction :: forall o m. MonadAff m => Action -> H.HalogenM State Action () o
 handleAction = case _ of
   Initialize -> do
     startTicker
-    seedFromUrl <- liftEffect readSeedFromUrl
-    startGame (fromMaybe 42 seedFromUrl)
+    params <- liftEffect readParamsFromUrl
+    H.modify_ _
+      { playersInput = fromMaybe 4 params.players
+      , movesInput = params.moves
+      }
+    startGame (fromMaybe 42 params.seed)
   SetSeedInput s -> H.modify_ _ { seedInput = s }
-  NewGame -> do
-    input <- H.gets _.seedInput
-    case Int.fromString (String.trim input) of
-      Just n -> startGame n
+  -- table-shape changes re-deal at once with the same seed
+  SetPlayers s -> do
+    case Int.fromString s of
+      Just n -> do
+        H.modify_ _ { playersInput = n }
+        restartSameSeed
       Nothing -> pure unit
+  ToggleMoves b -> do
+    H.modify_ _ { movesInput = b }
+    restartSameSeed
+  NewGame -> restartSameSeed
   RandomSeed -> do
     n <- liftEffect (randomInt 1 999999)
     startGame n
@@ -98,24 +111,34 @@ handleAction = case _ of
       Nothing -> pure unit
       Just game -> H.modify_ _ { position = clamp 0 (maxPosition game) n }
 
+restartSameSeed :: forall o m. MonadAff m => H.HalogenM State Action () o m Unit
+restartSameSeed = do
+  input <- H.gets _.seedInput
+  case Int.fromString (String.trim input) of
+    Just n -> startGame n
+    Nothing -> pure unit
+
 startGame :: forall o m. MonadAff m => Int -> H.HalogenM State Action () o m Unit
 startGame seedInt = do
+  st <- H.get
   let
+    count = fromMaybe defaultPlayerCount (mkPlayerCount st.playersInput)
     result = simulate
-      { playerCount: defaultPlayerCount
+      { playerCount: count
       , seed: mkSeed seedInt
       , policy: randomLegalPolicy
-      , maxTurns: 200
-      , movement: false
+      , maxTurns: 600
+      , movement: st.movesInput
       }
-    snapshots = knowledgeTimeline defaultPlayerCount Watcher result.log
+    snapshots = knowledgeTimeline count Watcher result.log
+    positions = positionsTimeline count result.log
   H.modify_ _
-    { game = Just { seedInt, result, snapshots }
+    { game = Just { seedInt, result, snapshots, positions }
     , position = 0
     , playing = false
     , seedInput = show seedInt
     }
-  liftEffect (writeSeedToUrl seedInt)
+  liftEffect (writeParamsToUrl seedInt (playerCountToInt count) st.movesInput)
 
 -- | One global metronome; `Tick` decides whether anything moves. Simpler
 -- | than subscribing and unsubscribing around play state.
@@ -127,17 +150,28 @@ startTicker = do
     liftEffect (HS.notify listener Tick)
   void (H.subscribe emitter)
 
-readSeedFromUrl :: Effect (Maybe Int)
-readSeedFromUrl = do
+readParamsFromUrl :: Effect { seed :: Maybe Int, players :: Maybe Int, moves :: Boolean }
+readParamsFromUrl = do
   search <- Location.search =<< Window.location =<< window
   let
     params = String.split (Pattern "&") (fromMaybe search (String.stripPrefix (Pattern "?") search))
-  pure (Array.findMap (\p -> Int.fromString =<< String.stripPrefix (Pattern "seed=") p) params)
+    intParam name = Array.findMap
+      (\p -> Int.fromString =<< String.stripPrefix (Pattern (name <> "=")) p)
+      params
+  pure
+    { seed: intParam "seed"
+    , players: intParam "players"
+    , moves: intParam "moves" == Just 1
+    }
 
-writeSeedToUrl :: Int -> Effect Unit
-writeSeedToUrl seedInt = do
+writeParamsToUrl :: Int -> Int -> Boolean -> Effect Unit
+writeParamsToUrl seedInt players moves = do
   history <- Window.history =<< window
-  History.pushState (unsafeToForeign {}) (DocumentTitle "kibitzer") (URL ("?seed=" <> show seedInt)) history
+  let
+    url = "?seed=" <> show seedInt
+      <> "&players=" <> show players
+      <> (if moves then "&moves=1" else "")
+  History.pushState (unsafeToForeign {}) (DocumentTitle "kibitzer") (URL url) history
 
 render :: forall m. State -> H.ComponentHTML Action () m
 render st =
@@ -173,6 +207,23 @@ header st =
             [ HP.value st.seedInput
             , HP.type_ HP.InputText
             , HE.onValueInput SetSeedInput
+            ]
+        , HH.label_ [ HH.text "Players" ]
+        , HH.select [ HE.onValueChange SetPlayers ]
+            ( map
+                ( \n -> HH.option
+                    [ HP.value (show n), HP.selected (n == st.playersInput) ]
+                    [ HH.text (show n) ]
+                )
+                [ 3, 4, 5, 6 ]
+            )
+        , HH.label [ HP.class_ (HH.ClassName "toggle") ]
+            [ HH.input
+                [ HP.type_ HP.InputCheckbox
+                , HP.checked st.movesInput
+                , HE.onChecked ToggleMoves
+                ]
+            , HH.text "Board"
             ]
         , HH.button [ HE.onClick \_ -> NewGame ] [ HH.text "Deal" ]
         , HH.button [ HE.onClick \_ -> RandomSeed ] [ HH.text "Random" ]

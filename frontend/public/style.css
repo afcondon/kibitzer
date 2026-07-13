@@ -91,13 +91,30 @@ h1 {
   color: var(--muted);
 }
 
-.controls input {
-  width: 6.5rem;
+.controls input[type="text"] {
+  width: 5.5rem;
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--ink);
   font: inherit;
   font-variant-numeric: tabular-nums;
 }
+
+.controls select {
+  padding: 0.4rem 0.3rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  font: inherit;
+}
+
+.controls .toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.controls .toggle input { accent-color: var(--accent); }
 
 .controls button, .transport-btn {
   padding: 0.4rem 0.9rem;
@@ -166,6 +183,64 @@ h2 {
   letter-spacing: 0.12em;
 }
 
+/* ---------- the board map (movement variant) ---------- */
+
+.map {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  aspect-ratio: 3 / 2.2;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  margin-bottom: 1.25rem;
+}
+
+.map-room {
+  border: 1px solid var(--hairline);
+  padding: 0.3rem 0.4rem;
+}
+
+.map-room span {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.token {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.5s ease, top 0.5s ease;
+}
+
+.token.en-route {
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px dashed var(--ink);
+}
+
+.token-remaining {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.6rem;
+  font-size: 0.6rem;
+  font-weight: 400;
+  color: var(--accent);
+  background: var(--paper);
+  padding: 0 0.15rem;
+}
+
 .seats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -187,6 +262,7 @@ h2 {
 }
 
 .seat.suggesting { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+.seat.moving { border-color: var(--ink); border-style: dashed; }
 .seat.passing { opacity: 0.55; }
 .seat.showing { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 .seat.receiving { border-color: var(--accent); }
