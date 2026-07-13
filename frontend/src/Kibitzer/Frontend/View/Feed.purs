@@ -6,7 +6,7 @@ module Kibitzer.Frontend.View.Feed (feedPane) where
 import Prelude
 
 import Data.Array as Array
-import Data.Maybe (Maybe(..))
+import Data.Foldable (intercalate)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Kibitzer.Describe (describeClaim, eventRef, ruleName)
@@ -42,9 +42,9 @@ factLine currentEventId fact =
         [ HH.text (ruleName fact.justification.rule) ]
     , HH.span [ HP.class_ (HH.ClassName "fact-claim") ]
         [ HH.text (describeClaim fact.claim) ]
-    , case fact.justification.origin of
-        Just origin ->
+    , case fact.justification.origins of
+        [] -> HH.text ""
+        origins ->
           HH.span [ HP.class_ (HH.ClassName "fact-origin") ]
-            [ HH.text ("resolves " <> eventRef origin) ]
-        Nothing -> HH.text ""
+            [ HH.text ("resolves " <> intercalate ", " (map eventRef origins)) ]
     ]

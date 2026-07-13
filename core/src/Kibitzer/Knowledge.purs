@@ -20,6 +20,7 @@ module Kibitzer.Knowledge
   , heldByAnyone
   , addFact
   , addDisjunction
+  , factIdFor
   , facts
   , factCount
   , disjunctions
@@ -78,9 +79,17 @@ derive instance Generic Rule _
 instance Show Rule where
   show = genericShow
 
--- | `source` is the event whose processing derived the fact; `origin`, when
--- | present, is the earlier show-event whose disjunction finally resolved.
-type Justification = { rule :: Rule, source :: EventId, origin :: Maybe EventId }
+-- | `source` is the event whose processing derived the fact; `origins` are
+-- | the earlier show-events whose disjunctions the derivation drew on; and
+-- | `premises` are the prior facts it consumed — the edges of the
+-- | derivation DAG. Premises always point backwards (`FactId`s are issued
+-- | in feed order), so the DAG is acyclic by construction.
+type Justification =
+  { rule :: Rule
+  , source :: EventId
+  , origins :: Array EventId
+  , premises :: Array FactId
+  }
 
 newtype FactId = FactId Int
 
@@ -94,10 +103,12 @@ type Fact = { id :: FactId, claim :: Claim, justification :: Justification }
 
 -- | "That player holds at least one of these cards" — the public residue of
 -- | a card being shown. Candidates only ever shrink; `resolved` flips once
--- | the player is known to hold one of them.
+-- | the player is known to hold one of them. `initial` keeps the candidates
+-- | as born, so a resolution can name the facts that killed the other two.
 newtype Disjunction = Disjunction
   { player :: PlayerId
   , candidates :: Set Card
+  , initial :: Set Card
   , source :: EventId
   , resolved :: Boolean
   }
@@ -187,6 +198,12 @@ alreadyKnown claim knowledge = case claim of
 
 addDisjunction :: Disjunction -> Knowledge -> Knowledge
 addDisjunction d (Knowledge k) = Knowledge (k { disjunctions = Array.snoc k.disjunctions d })
+
+-- | The fact recording a claim, if it is on the feed — the premise lookup
+-- | used when a rule wants to cite its inputs. Linear scan; the feed tops
+-- | out near a hundred facts.
+factIdFor :: Claim -> Knowledge -> Maybe FactId
+factIdFor claim (Knowledge k) = _.id <$> Array.find (\f -> f.claim == claim) k.facts
 
 -- | The full solution, once one card per category is known to be in the
 -- | envelope. The three lookups are independent — hence `ado`.

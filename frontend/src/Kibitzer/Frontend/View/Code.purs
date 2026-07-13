@@ -60,9 +60,10 @@ an array of precomputed snapshots."""
   | NotInEnvelope Card
 
 type Justification =
-  { rule :: Rule            -- which deduction fired
-  , source :: EventId       -- the event whose processing derived it
-  , origin :: Maybe EventId -- the show-event a disjunction resolved from
+  { rule :: Rule                -- which deduction fired
+  , source :: EventId           -- the event whose processing derived it
+  , origins :: Array EventId    -- show-events the derivation drew on
+  , premises :: Array FactId    -- prior facts it consumed
   }
 
 type Fact = { id :: FactId, claim :: Claim, justification :: Justification }"""
@@ -70,7 +71,10 @@ type Fact = { id :: FactId, claim :: Claim, justification :: Justification }"""
             """Every fact the watcher ever writes down carries its provenance.
 That is what turns the notebook from a magic grid into an explainable
 one — the feed can say "E61 · only candidate left — B holds the
-Billiard Room (resolving the card shown at E2)" because the data does."""
+Billiard Room (resolving the card shown at E2)" because the data does.
+The premises make derivation a DAG — acyclic for free, since a fact can
+only cite facts with smaller ids — and that DAG is exactly what the
+Cascade tab draws."""
         ]
     , exhibit "Deduction is a fixpoint of monotone rules"
         """saturate :: EventId -> Knowledge -> Knowledge
@@ -83,7 +87,10 @@ ruleEnvelopeByElimination knowledge@(Knowledge k) = do
   c <- allCards
   guard (Array.all (\p -> Set.member c (lacksOf knowledge p))
                    (allPlayers k.playerCount))
-  pure { claim: InEnvelope c, rule: EnvelopeByElimination, origin: Nothing }"""
+  let premises = Array.mapMaybe (\p -> factIdFor (Lacks p c) knowledge)
+                                (allPlayers k.playerCount)
+  pure { claim: InEnvelope c, rule: EnvelopeByElimination
+       , origins: [], premises }"""
         [ para
             """Each deduction rule is a small, individually-tested function from
 knowledge to new claims — the Array monad reads like the quantifier it

@@ -13,7 +13,8 @@ module Kibitzer.Describe
 
 import Prelude
 
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Foldable (intercalate)
+import Data.Maybe (fromMaybe)
 import Data.String.CodeUnits (charAt, singleton)
 import Kibitzer.Board (Position(..))
 import Kibitzer.Cards (Card(..), roomName, suspectName, weaponName)
@@ -105,6 +106,10 @@ describeFact { claim, justification } =
     <> ruleName justification.rule
     <> "] "
     <> describeClaim claim
-    <> case justification.origin of
-      Just origin -> " (resolving the card shown at " <> eventRef origin <> ")"
-      Nothing -> ""
+    <> case justification.origins of
+      [] -> ""
+      [ origin ] -> " (resolving the card shown at " <> eventRef origin <> ")"
+      origins ->
+        " (drawing on the cards shown at "
+          <> intercalate ", " (map eventRef origins)
+          <> ")"

@@ -32,22 +32,30 @@ import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Kibitzer.Cards (Card, allCards, allCategories, cardsIn)
 import Kibitzer.Event (EventId, Log)
-import Kibitzer.Knowledge (Claim(..), Disjunction(..), Knowledge(..), Rule(..), addDisjunction, addFact, emptyKnowledge, envelopeIn, envelopeOut, heldByAnyone, holdsOf, lacksOf)
+import Kibitzer.Knowledge (Claim(..), Disjunction(..), FactId, Knowledge(..), Rule(..), addDisjunction, addFact, emptyKnowledge, envelopeIn, envelopeOut, factIdFor, heldByAnyone, holdsOf, lacksOf)
 import Kibitzer.Observe (Observation(..), Perspective, observeLog)
 import Kibitzer.Player (PlayerCount, PlayerId, allPlayers)
 import Kibitzer.Suggestion (suggestionCards)
 
 -- | What a single deduction rule may emit: a claim, under its rule's name,
--- | optionally pointing back at the show-event it finally resolved.
-type Derived = { claim :: Claim, rule :: Rule, origin :: Maybe EventId }
+-- | citing the show-events it drew on and the prior facts it consumed.
+type Derived =
+  { claim :: Claim
+  , rule :: Rule
+  , origins :: Array EventId
+  , premises :: Array FactId
+  }
 
 learn :: Tuple EventId Observation -> Knowledge -> Knowledge
 learn (Tuple source observation) knowledge =
   saturate source (direct observation)
   where
+  -- Direct consequences of witnessing: no premises, no origins.
   conclude rule claims k =
     foldl
-      (\acc claim -> addFact { claim, justification: { rule, source, origin: Nothing } } acc)
+      ( \acc claim ->
+          addFact { claim, justification: { rule, source, origins: [], premises: [] } } acc
+      )
       k
       claims
 
@@ -75,6 +83,7 @@ learn (Tuple source observation) knowledge =
         ( Disjunction
             { player: by
             , candidates: suggestionCards suggestion
+            , initial: suggestionCards suggestion
             , source
             , resolved: false
             }
@@ -99,8 +108,8 @@ saturateOnce source knowledge =
     derived = Array.concatMap (\rule -> rule pruned) allRules
   in
     foldl
-      ( \k { claim, rule, origin } ->
-          addFact { claim, justification: { rule, source, origin } } k
+      ( \k { claim, rule, origins, premises } ->
+          addFact { claim, justification: { rule, source, origins, premises } } k
       )
       pruned
       derived
@@ -139,20 +148,38 @@ pruneDisjunctions knowledge@(Knowledge k) =
           Disjunction (d { candidates = candidates, resolved = resolved })
 
 ruleSingletonDisjunction :: Knowledge -> Array Derived
-ruleSingletonDisjunction (Knowledge k) =
+ruleSingletonDisjunction knowledge@(Knowledge k) =
   k.disjunctions # Array.mapMaybe case _ of
     Disjunction d
       | not d.resolved, Set.size d.candidates == 1, Just c <- Set.findMin d.candidates ->
-          Just { claim: Holds d.player c, rule: SingletonDisjunction, origin: Just d.source }
+          Just
+            { claim: Holds d.player c
+            , rule: SingletonDisjunction
+            , origins: [ d.source ]
+            , premises:
+                Array.mapMaybe (pruneEvidence knowledge d.player)
+                  (Set.toUnfoldable (Set.difference d.initial d.candidates))
+            }
     _ -> Nothing
+
+-- | The fact that ruled a candidate out of a disjunction: the shower is
+-- | known to lack it, or someone else is known to hold it.
+pruneEvidence :: Knowledge -> PlayerId -> Card -> Maybe FactId
+pruneEvidence knowledge@(Knowledge k) player c =
+  case factIdFor (Lacks player c) knowledge of
+    Just fid -> Just fid
+    Nothing ->
+      Array.findMap (\q -> factIdFor (Holds q c) knowledge)
+        (Array.filter (_ /= player) (allPlayers k.playerCount))
 
 ruleUniqueOwner :: Knowledge -> Array Derived
 ruleUniqueOwner knowledge@(Knowledge k) = do
   p /\ held <- heldEntries knowledge
   c <- Set.toUnfoldable held
-  let excludeOthers q = { claim: Lacks q c, rule: UniqueOwner, origin: Nothing }
+  let premises = Array.fromFoldable (factIdFor (Holds p c) knowledge)
+  let excludeOthers q = { claim: Lacks q c, rule: UniqueOwner, origins: [], premises }
   Array.cons
-    { claim: NotInEnvelope c, rule: UniqueOwner, origin: Nothing }
+    { claim: NotInEnvelope c, rule: UniqueOwner, origins: [], premises }
     (map excludeOthers (Array.filter (_ /= p) (allPlayers k.playerCount)))
 
 ruleHandComplete :: Knowledge -> Array Derived
@@ -160,15 +187,28 @@ ruleHandComplete knowledge@(Knowledge k) = do
   p /\ size <- Map.toUnfoldable k.handSizes :: Array (PlayerId /\ Int)
   let held = holdsOf knowledge p
   guard (Set.size held == size)
+  let premises = holdsPremises knowledge p held
   c <- Array.filter (\c -> not (Set.member c held)) allCards
-  pure { claim: Lacks p c, rule: HandComplete, origin: Nothing }
+  pure { claim: Lacks p c, rule: HandComplete, origins: [], premises }
+
+-- | Every `Holds p c` fact behind a set of held cards.
+holdsPremises :: Knowledge -> PlayerId -> Set Card -> Array FactId
+holdsPremises knowledge p held =
+  Array.mapMaybe (\c -> factIdFor (Holds p c) knowledge) (Set.toUnfoldable held)
 
 ruleLastCandidateHand :: Knowledge -> Array Derived
 ruleLastCandidateHand knowledge@(Knowledge k) = do
   c <- Set.toUnfoldable (envelopeOut knowledge)
   guard (not (Set.member c (heldByAnyone knowledge)))
   case Array.filter (\p -> not (Set.member c (lacksOf knowledge p))) (allPlayers k.playerCount) of
-    [ p ] -> pure { claim: Holds p c, rule: LastCandidateHand, origin: Nothing }
+    [ p ] ->
+      let
+        excluded = Array.filter (_ /= p) (allPlayers k.playerCount)
+        premises =
+          Array.fromFoldable (factIdFor (NotInEnvelope c) knowledge)
+            <> Array.mapMaybe (\q -> factIdFor (Lacks q c) knowledge) excluded
+      in
+        pure { claim: Holds p c, rule: LastCandidateHand, origins: [], premises }
     _ -> []
 
 -- | A player with f free hand slots and f pairwise-disjoint unresolved
@@ -192,21 +232,26 @@ ruleDisjunctionCapacity knowledge@(Knowledge k) = do
   let free = size - Set.size held
   guard (free > 0)
   let
-    pools = Array.nub
-      ( Array.mapMaybe
-          ( case _ of
-              Disjunction d | not d.resolved, d.player == p -> Just d.candidates
-              _ -> Nothing
-          )
-          k.disjunctions
+    unresolved = Array.mapMaybe
+      ( case _ of
+          Disjunction d | not d.resolved, d.player == p ->
+            Just { candidates: d.candidates, source: d.source }
+          _ -> Nothing
       )
+      k.disjunctions
+    pools = Array.nub (map _.candidates unresolved)
   case reachableUnion free pools of
     Nothing -> []
     Just reachable -> do
+      -- Provenance is deliberately partial here: the argument spans every
+      -- qualifying family, so we cite the held cards and all the involved
+      -- show-events — an anchor for the arcs, not a proof term.
+      let premises = holdsPremises knowledge p held
+      let origins = Array.nub (map _.source unresolved)
       c <- Array.filter
         (\c -> not (Set.member c held) && not (Set.member c reachable))
         allCards
-      pure { claim: Lacks p c, rule: DisjunctionCapacity, origin: Nothing }
+      pure { claim: Lacks p c, rule: DisjunctionCapacity, origins, premises }
 
 -- | The intersection of the candidate unions over every pairwise-disjoint
 -- | family of exactly `size` pools; Nothing when no such family exists.
@@ -238,7 +283,7 @@ ruleDisjunctionPigeonhole (Knowledge k) = do
     narrow = Array.mapMaybe
       ( case _ of
           Disjunction d | not d.resolved, Set.size d.candidates <= 2 ->
-            Just { player: d.player, candidates: d.candidates }
+            Just { player: d.player, candidates: d.candidates, source: d.source }
           _ -> Nothing
       )
       k.disjunctions
@@ -248,13 +293,21 @@ ruleDisjunctionPigeonhole (Knowledge k) = do
   let pool = Set.union first.candidates second.candidates
   guard (Set.size pool == 2)
   c <- Set.toUnfoldable pool
-  pure { claim: NotInEnvelope c, rule: DisjunctionPigeonhole, origin: Nothing }
+  pure
+    { claim: NotInEnvelope c
+    , rule: DisjunctionPigeonhole
+    , origins: [ first.source, second.source ]
+    , premises: []
+    }
 
 ruleEnvelopeByElimination :: Knowledge -> Array Derived
 ruleEnvelopeByElimination knowledge@(Knowledge k) = do
   c <- allCards
   guard (Array.all (\p -> Set.member c (lacksOf knowledge p)) (allPlayers k.playerCount))
-  pure { claim: InEnvelope c, rule: EnvelopeByElimination, origin: Nothing }
+  let
+    premises = Array.mapMaybe (\p -> factIdFor (Lacks p c) knowledge)
+      (allPlayers k.playerCount)
+  pure { claim: InEnvelope c, rule: EnvelopeByElimination, origins: [], premises }
 
 -- | The envelope holds exactly one card per category, counted both ways:
 -- | all-but-one excluded means the last one is in; one known in means the
@@ -267,22 +320,27 @@ ruleCategoryCount knowledge = lastOneIn <> siblingsOut
     let cards = cardsIn category
     let out = Set.intersection cards (envelopeOut knowledge)
     guard (Set.size cards - Set.size out == 1)
+    let
+      premises = Array.mapMaybe (\o -> factIdFor (NotInEnvelope o) knowledge)
+        (Set.toUnfoldable out)
     case Set.findMin (Set.difference cards out) of
-      Just c -> pure { claim: InEnvelope c, rule: CategoryCount, origin: Nothing }
+      Just c -> pure { claim: InEnvelope c, rule: CategoryCount, origins: [], premises }
       Nothing -> []
 
   siblingsOut = do
     category <- allCategories
     let cards = cardsIn category
     c <- Set.toUnfoldable (Set.intersection cards (envelopeIn knowledge))
+    let premises = Array.fromFoldable (factIdFor (InEnvelope c) knowledge)
     sibling <- Set.toUnfoldable (Set.delete c cards)
-    pure { claim: NotInEnvelope sibling, rule: CategoryCount, origin: Nothing }
+    pure { claim: NotInEnvelope sibling, rule: CategoryCount, origins: [], premises }
 
 ruleEnvelopeExcludesHands :: Knowledge -> Array Derived
 ruleEnvelopeExcludesHands knowledge@(Knowledge k) = do
   c <- Set.toUnfoldable (envelopeIn knowledge)
+  let premises = Array.fromFoldable (factIdFor (InEnvelope c) knowledge)
   p <- allPlayers k.playerCount
-  pure { claim: Lacks p c, rule: EnvelopeExcludesHands, origin: Nothing }
+  pure { claim: Lacks p c, rule: EnvelopeExcludesHands, origins: [], premises }
 
 heldEntries :: Knowledge -> Array (PlayerId /\ Set Card)
 heldEntries (Knowledge k) = Map.toUnfoldable k.holds

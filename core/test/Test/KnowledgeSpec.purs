@@ -75,8 +75,11 @@ runKnowledgeTests = do
       Nothing -> assert false
       Just f -> do
         assertEqual { actual: f.justification.rule, expected: SingletonDisjunction }
-        assertEqual { actual: f.justification.origin, expected: Just (EventId 0) }
+        assertEqual { actual: f.justification.origins, expected: [ EventId 0 ] }
         assertEqual { actual: f.justification.source, expected: EventId 2 }
+        -- the two premises are the pass-facts that killed Rope and Study
+        assertEqual { actual: Array.length f.justification.premises, expected: 2 }
+        assert (Array.all (_ < f.id) f.justification.premises)
     assert (Array.all (\(Disjunction d) -> d.resolved) (disjunctions k))
 
   log "Knowledge: a full hand excludes every other card"

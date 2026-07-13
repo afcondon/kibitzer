@@ -25,7 +25,7 @@ import Kibitzer.Cards (Card)
 import Kibitzer.Event (Event(..), EventId(..))
 import Kibitzer.Game (Result, simulate)
 import Kibitzer.Infer (knowledgeTimeline, saturate)
-import Kibitzer.Knowledge (Disjunction(..), Knowledge, consistent, disjunctions, envelopeIn, envelopeOut, holdsOf, lacksOf)
+import Kibitzer.Knowledge (Disjunction(..), Knowledge, consistent, disjunctions, envelopeIn, envelopeOut, facts, holdsOf, lacksOf)
 import Kibitzer.Observe (Perspective(..))
 import Kibitzer.Player (PlayerId, allPlayers, defaultPlayerCount, mkPlayerCount)
 import Kibitzer.Policy (randomLegalPolicy)
@@ -80,6 +80,14 @@ sound gc knowledge =
   disjunctionSatisfied (Disjunction d) =
     d.resolved || not (Set.isEmpty (Set.intersection d.candidates (handOf gc d.player)))
 
+-- | Every premise a fact cites was already on the feed — the derivation
+-- | DAG is well-founded (and therefore acyclic) at every snapshot.
+wellFoundedProvenance :: Knowledge -> Boolean
+wellFoundedProvenance knowledge =
+  Array.all
+    (\f -> Array.all (_ < f.id) f.justification.premises)
+    (facts knowledge)
+
 -- | Everything definite in `smaller` is definite in `larger`.
 subsumedBy :: Array PlayerId -> Knowledge -> Knowledge -> Boolean
 subsumedBy players smaller larger =
@@ -100,7 +108,11 @@ runPropTests = do
       gc = runGame seedInt countInt moves
     in
       Array.all
-        (\perspective -> Array.all (\k -> sound gc k && consistent k) (timeline gc perspective))
+        ( \perspective ->
+            Array.all
+              (\k -> sound gc k && consistent k && wellFoundedProvenance k)
+              (timeline gc perspective)
+        )
         (perspectives gc)
 
   log "Prop: monotonicity — knowledge only grows along the log"
