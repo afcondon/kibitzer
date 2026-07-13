@@ -1,7 +1,7 @@
 -- | Golden transcript for seed 42: the exact game the README and the
 -- | frontend cross-check against. If simulation or the Rng change, these
 -- | numbers move — deliberately loudly.
-module Test.GameSpec (runGameTests, seed42) where
+module Test.GameSpec (runGameTests, seed42, seed42Moves) where
 
 import Prelude
 
@@ -9,6 +9,7 @@ import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Console (log)
+import Kibitzer.Board (Position(..))
 import Kibitzer.Cards (Card(..), Room(..), Suspect(..), Weapon(..))
 import Kibitzer.Game (Result, simulate)
 import Kibitzer.Event (Event(..))
@@ -71,3 +72,42 @@ runGameTests = do
 
   log "Game: deterministic in the seed"
   assert (seed42.log == result.log)
+
+  log "Game: seed-42 movement golden"
+  let moved = seed42Moves
+  -- the deal precedes any policy or dice, so the envelope is the same
+  -- game as classic seed 42 — only the path to it differs
+  assertEqual { actual: moved.solution, expected: result.solution }
+  assertEqual { actual: Array.length moved.log, expected: 35 }
+  assertEqual { actual: moved.winner, expected: Just (PlayerId 1) }
+  assertEqual { actual: moved.turns, expected: 14 }
+  -- E1 is A's first move: rolls 7, reaches the adjacent Ballroom (5 steps)
+  assertEqual
+    { actual: Array.index moved.log 1
+    , expected: Just
+        ( Moved
+            { player: PlayerId 0
+            , roll: 7
+            , position: InRoom Ballroom
+            }
+        )
+    }
+  assertEqual
+    { actual: Array.last moved.log
+    , expected: Just
+        ( AccusationMade
+            { by: PlayerId 1
+            , accusation: moved.solution
+            , correct: true
+            }
+        )
+    }
+
+seed42Moves :: Result
+seed42Moves = simulate
+  { playerCount: defaultPlayerCount
+  , seed: mkSeed 42
+  , policy: randomLegalPolicy
+  , maxTurns: 600
+  , movement: true
+  }

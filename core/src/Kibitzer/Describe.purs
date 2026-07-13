@@ -57,7 +57,7 @@ describeEvent = case _ of
         <> roomName to
         <> " — "
         <> show remaining
-        <> " steps short."
+        <> (if remaining == 1 then " step short." else " steps short.")
   SuggestionMade { by, suggestion } ->
     playerName by <> " suggests " <> describeSuggestion suggestion <> "."
   Passed { player } ->

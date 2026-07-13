@@ -39,16 +39,16 @@ type GameCase =
   , players :: Array PlayerId
   }
 
-runGame :: Int -> Int -> GameCase
-runGame seedInt countInt =
+runGame :: Int -> Int -> Boolean -> GameCase
+runGame seedInt countInt movement =
   let
     count = fromMaybe defaultPlayerCount (mkPlayerCount (3 + countInt `mod` 4))
     result = simulate
       { playerCount: count
       , seed: mkSeed seedInt
       , policy: randomLegalPolicy
-      , maxTurns: 400
-      , movement: false
+      , maxTurns: 1200
+      , movement
       }
     hands = case Array.head result.log of
       Just (GameDealt d) -> d.hands
@@ -93,19 +93,20 @@ consecutivePairs xs = Array.zip xs (Array.drop 1 xs)
 
 runPropTests :: Effect Unit
 runPropTests = do
+  -- Every theorem runs over both modes: `moves` is a generated Boolean.
   log "Prop: soundness — no perspective ever infers a false fact"
-  quickCheck' 25 \seedInt countInt ->
+  quickCheck' 25 \seedInt countInt moves ->
     let
-      gc = runGame seedInt countInt
+      gc = runGame seedInt countInt moves
     in
       Array.all
         (\perspective -> Array.all (\k -> sound gc k && consistent k) (timeline gc perspective))
         (perspectives gc)
 
   log "Prop: monotonicity — knowledge only grows along the log"
-  quickCheck' 25 \seedInt countInt ->
+  quickCheck' 25 \seedInt countInt moves ->
     let
-      gc = runGame seedInt countInt
+      gc = runGame seedInt countInt moves
     in
       Array.all
         ( \perspective ->
@@ -115,9 +116,9 @@ runPropTests = do
         (perspectives gc)
 
   log "Prop: the watcher never knows more than any player"
-  quickCheck' 25 \seedInt countInt ->
+  quickCheck' 25 \seedInt countInt moves ->
     let
-      gc = runGame seedInt countInt
+      gc = runGame seedInt countInt moves
       watcherLine = timeline gc Watcher
     in
       Array.all
@@ -128,17 +129,18 @@ runPropTests = do
         gc.players
 
   log "Prop: fixpoint and termination — saturate idempotent, games end correctly"
-  quickCheck' 25 \seedInt countInt ->
+  quickCheck' 25 \seedInt countInt moves ->
     let
-      gc = runGame seedInt countInt
+      gc = runGame seedInt countInt moves
       finals = map (\perspective -> Array.last (timeline gc perspective)) (perspectives gc)
-      turnEvents = Array.filter
-        ( case _ of
-            SuggestionMade _ -> true
-            AccusationMade _ -> true
-            _ -> false
-        )
-        gc.result.log
+      -- classic: one suggestion or accusation per counted turn;
+      -- movement: one move or accusation per counted turn
+      countsTurn = case _ of
+        SuggestionMade _ -> not moves
+        Moved _ -> moves
+        AccusationMade _ -> true
+        _ -> false
+      turnEvents = Array.filter countsTurn gc.result.log
     in
       isJust gc.result.winner
         && gc.result.turns == Array.length turnEvents

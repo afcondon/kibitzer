@@ -9,6 +9,7 @@ import Test.CardsSpec (runCardsTests)
 import Test.DealSpec (runDealTests)
 import Test.GameSpec (runGameTests)
 import Test.KnowledgeSpec (runKnowledgeTests)
+import Test.MovementSpec (runMovementTests)
 import Test.PropSpec (runPropTests)
 import Test.RngSpec (runRngTests)
 import Test.WatcherSpec (runWatcherTests)
@@ -22,5 +23,6 @@ main = do
   runKnowledgeTests
   runGameTests
   runWatcherTests
+  runMovementTests
   runPropTests
   log "All kibitzer-core tests passed."

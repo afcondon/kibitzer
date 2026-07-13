@@ -25,7 +25,7 @@ import Kibitzer.Game (Result, simulate)
 import Kibitzer.Infer (knowledgeAt)
 import Kibitzer.Knowledge (Knowledge, envelopeIn, envelopeOut, facts, factCount, holdsOf, lacksOf, solutionIfKnown)
 import Kibitzer.Observe (Perspective(..))
-import Kibitzer.Player (PlayerCount, PlayerId, allPlayers, defaultPlayerCount)
+import Kibitzer.Player (PlayerCount, PlayerId, allPlayers, defaultPlayerCount, mkPlayerCount)
 import Kibitzer.Policy (randomLegalPolicy)
 import Kibitzer.Rng (mkSeed)
 import Node.Process (argv)
@@ -33,18 +33,26 @@ import Node.Process (argv)
 main :: Effect Unit
 main = do
   args <- argv
-  let seedInt = fromMaybe 42 (Array.index args 2 >>= Int.fromString)
-  run defaultPlayerCount seedInt
+  let
+    rest = Array.drop 2 args
+    -- usage: [seed] [--moves] [--players N] — the seed comes first
+    seedInt = fromMaybe 42 (Int.fromString =<< Array.head rest)
+    movement = Array.elem "--moves" rest
+    count = fromMaybe defaultPlayerCount do
+      i <- Array.elemIndex "--players" rest
+      n <- Int.fromString =<< Array.index rest (i + 1)
+      mkPlayerCount n
+  run count movement seedInt
 
-run :: PlayerCount -> Int -> Effect Unit
-run count seedInt = do
+run :: PlayerCount -> Boolean -> Int -> Effect Unit
+run count movement seedInt = do
   let
     result = simulate
       { playerCount: count
       , seed: mkSeed seedInt
       , policy: randomLegalPolicy
-      , maxTurns: 200
-      , movement: false
+      , maxTurns: 600
+      , movement
       }
   log ("kibitzer — seed " <> show seedInt <> "\n")
 
