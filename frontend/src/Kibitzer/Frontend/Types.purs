@@ -18,10 +18,13 @@ import Data.Array as Array
 import Data.Map (Map)
 import Data.Maybe (Maybe, fromMaybe)
 import Halogen.Subscription as HS
+import Hylograph.Simulation (SimulationHandle)
 import Kibitzer.Board (Position)
 import Kibitzer.Cascade (CascadeEdge, CascadeFrame)
 import Kibitzer.Event (Event)
 import Kibitzer.Frontend.Cascade.Anim (CascadeAnim)
+import Kibitzer.Frontend.Packs.Model (PackRow, PossInfo)
+import Kibitzer.Frontend.Packs.View (PacksAnim)
 import Kibitzer.Game (Result)
 import Kibitzer.Knowledge (FactId, Knowledge, emptyKnowledge)
 import Kibitzer.Player (PlayerId, defaultPlayerCount)
@@ -52,6 +55,10 @@ type State =
   , animPending :: Boolean -- an animation frame is already scheduled
   , animListener :: Maybe (HS.Listener Action)
   , wiring :: Boolean -- keep settled provenance hairlines visible
+  , packView :: Boolean -- Cascade tab: possibility packs (true) or the grid
+  , simHandle :: Maybe (SimulationHandle PackRow)
+  , packStates :: Map Int PossInfo -- possibility states at the current position
+  , packsAnim :: PacksAnim
   }
 
 data Action
@@ -71,6 +78,7 @@ data Action
   | Tick
   | AnimTick
   | ToggleWiring Boolean
+  | SetPackView Boolean
 
 currentKnowledge :: Game -> Int -> Knowledge
 currentKnowledge game position =

@@ -51,15 +51,25 @@ the timeline; facts only ever accumulate."""
             """Every game is a pure function of its seed, so the URL reproduces
 the exact game — deal, dice, deductions and all."""
         , para
-            """The Cascade tab replays the same notebook as animation. Every
-fact carries its provenance — the rule that fired, and the earlier
-facts it consumed — so derivation is a directed graph, and the Cascade
-draws it: facts fly in from the current event, chains arriving in
-derivation order, hairlines flashing from premise to conclusion (the
-"wiring" toggle keeps them), dashed spines marking the unresolved
-"showed one of these" questions. The sparkline underneath counts facts
-per event; the tall bars are avalanches — click one and watch a single
-pass close out half a column."""
+            """The Cascade tab shows the same knowledge as physics. Each card
+sits in exactly one of the N hands or the envelope, so every game
+starts as (N+1)×21 possibilities — a bubble pack around each player and
+one around the envelope at the centre of the table. Knowledge only ever
+removes: a pass turns possibilities faint, and the moment a card's true
+place is proven, every other copy of it flies into the proven one and
+is absorbed. Watch a card get proven into the envelope and you are
+watching the deduction itself — it is exactly the fact that nobody has
+it that puts it there. Cards a player showed but the watcher couldn't
+see orbit that player's pack until the candidates are whittled down.
+The watcher solving the murder looks like the envelope's pack
+collapsing to three solid cards, one of each colour."""
+        , para
+            """The Grid sub-view is the same engine drawn as a notebook: facts
+fly onto the grid in derivation order, hairlines run from premise to
+conclusion (hover any mark or line for its justification), and dashed
+spines mark the open "showed one of these" questions. The sparkline
+under both views counts facts per event; the tall bars are avalanches —
+click one and watch a single pass close out half a column."""
         ]
     , section "The board variant"
         [ para

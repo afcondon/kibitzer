@@ -15,8 +15,11 @@ package:
     - halogen
     - halogen-subscriptions
     - hylograph-selection
+    - hylograph-simulation
     - hylograph-transitions
     - integers
+    - nullable
+    - numbers
     - kibitzer-core
     - maybe
     - ordered-collections

@@ -1,7 +1,18 @@
 # Cascade v2 — possibility packs (the force-layout view)
 
 *Status: planned 2026-07-13, after Andrew's design review of the grid
-cascade. Not started.*
+cascade. Open questions resolved same evening:*
+
+- *Envelope at the **centre of the player ring**, marked by a
+  non-animating rounded rect; every convergence flies radially inward.*
+- *Disjunctions via the **radial force**: candidates of unresolved
+  disjunctions orbit the shower's pack (one shared orbit per pack,
+  dashed guide circle); pruning drops a card back into the bubble pack,
+  resolution collapses the orbit. `ForceRadial` supports per-force
+  filter predicates with static radius/centre — one orbit force per
+  pack, rebuilt via `updateSetup` when membership changes.*
+- ***Clean dots** — no monograms; the abstraction is the point: the
+  watcher never sees a single card, and neither do we.*
 
 ## The design critique this answers
 

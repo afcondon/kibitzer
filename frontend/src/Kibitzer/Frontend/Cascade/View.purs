@@ -4,6 +4,8 @@
 -- | cascade wants to draw.
 module Kibitzer.Frontend.Cascade.View
   ( redraw
+  , verdictFor
+  , stripFor
   ) where
 
 import Prelude
@@ -38,8 +40,8 @@ redraw { game, position, wiring, anim, onBar } = renderScene
   , edges
   , brackets
   , rail: eventLabel position (currentEvent game position)
-  , verdict
-  , strip
+  , verdict: verdictFor game position
+  , strip: stripFor game position
   , onBar
   }
   where
@@ -47,20 +49,6 @@ redraw { game, position, wiring, anim, onBar } = renderScene
   knowledge = currentKnowledge game position
   visible = facts knowledge
   visibleCount = Array.length visible
-
-  -- the credit line: the full solution once the envelope is determined
-  -- (with the moment it happened), quiet progress until then
-  verdict :: Verdict
-  verdict = case solutionIfKnown knowledge of
-    Just solution ->
-      Solved
-        ( "The watcher has it: " <> describeSuggestion solution
-            <> case Array.findIndex (isJust <<< solutionIfKnown) game.snapshots of
-              Just p | p >= 1 -> " — known since " <> eventRef (EventId (p - 1)) <> "."
-              _ -> "."
-        )
-    Nothing ->
-      Working ("Envelope determined: " <> show (Set.size (envelopeIn knowledge)) <> " of 3.")
 
   -- every fact of the finished game, indexable by dense FactId
   allFacts :: Array Fact
@@ -117,6 +105,24 @@ redraw { game, position, wiring, anim, onBar } = renderScene
   rowCentre :: Card -> Number
   rowCentre c = L.rowY (L.rowIndex c)
 
-  strip :: Array StripBar
-  strip = game.cascades # Array.mapWithIndex \i fr ->
-    { index: i, count: Array.length fr.newFacts, current: i == position }
+-- | The credit line: the full solution once the envelope is determined
+-- | (with the moment it happened), quiet progress until then. Shared by
+-- | both cascade views.
+verdictFor :: Game -> Int -> Verdict
+verdictFor game position = case solutionIfKnown knowledge of
+  Just solution ->
+    Solved
+      ( "The watcher has it: " <> describeSuggestion solution
+          <> case Array.findIndex (isJust <<< solutionIfKnown) game.snapshots of
+            Just p | p >= 1 -> " — known since " <> eventRef (EventId (p - 1)) <> "."
+            _ -> "."
+      )
+  Nothing ->
+    Working ("Envelope determined: " <> show (Set.size (envelopeIn knowledge)) <> " of 3.")
+  where
+  knowledge = currentKnowledge game position
+
+-- | Facts-per-event sparkline bars, shared by both cascade views.
+stripFor :: Game -> Int -> Array StripBar
+stripFor game position = game.cascades # Array.mapWithIndex \i fr ->
+  { index: i, count: Array.length fr.newFacts, current: i == position }

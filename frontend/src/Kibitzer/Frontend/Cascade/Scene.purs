@@ -12,7 +12,10 @@ module Kibitzer.Frontend.Cascade.Scene
   , renderChrome
   , renderScene
   , clearScene
+  , clearView
   , eventLabel
+  , railTree
+  , stripTree
   ) where
 
 import Prelude
@@ -24,7 +27,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Hylograph.HATS (Tree, elem, forEach, onClick, staticStr, withBehaviors)
 import Hylograph.HATS.Friendly as F
-import Hylograph.HATS.InterpreterTick (rerender)
+import Hylograph.HATS.InterpreterTick (clearContainer, rerender)
 import Hylograph.Internal.Element.Types (ElementType(..))
 import Hylograph.Transition.Tick as Tick
 import Kibitzer.Cards (allCards, displayName)
@@ -80,6 +83,12 @@ accentFaint = "#e9a3a3"
 
 hairline :: String
 hairline = "#e6e6e6"
+
+-- | Empty the whole cascade container. Called when switching between the
+-- | packs and grid views: HATS diffs against whatever DOM it finds, and
+-- | diffing one view's chrome against the other's leaves debris.
+clearView :: Effect Unit
+clearView = clearContainer "#cascade-view"
 
 -- | The SVG skeleton: static chrome drawn once, then one empty named
 -- | group per moving layer (z-order: edges under brackets under marks).

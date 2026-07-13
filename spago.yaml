@@ -8,3 +8,5 @@ workspace:
       path: ../purescript-hylograph-libs/purescript-hylograph-transitions
     hylograph-graph:
       path: ../purescript-hylograph-libs/purescript-hylograph-graph
+    hylograph-simulation:
+      path: ../purescript-hylograph-libs/purescript-hylograph-simulation
