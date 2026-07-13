@@ -2,7 +2,11 @@
 -- | ground-truth transcript, then the watcher's notebook — everything a
 -- | non-player deduced without ever seeing a card.
 -- |
--- |   spago run -p kibitzer-example -- 42
+-- |   spago run -p kibitzer-example -- 42 [--moves] [--players N]
+-- |   spago run -p kibitzer-example -- stats [seeds]
+-- |
+-- | The stats mode compares the watcher's fortunes across table sizes and
+-- | the classic/movement variants over many seeded games.
 module Example.Main where
 
 import Prelude
@@ -11,7 +15,7 @@ import Data.Array as Array
 import Data.Foldable (for_, traverse_)
 import Data.Int as Int
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Monoid (power)
 import Data.Set as Set
 import Data.String as String
@@ -25,7 +29,7 @@ import Kibitzer.Game (Result, simulate)
 import Kibitzer.Infer (knowledgeAt)
 import Kibitzer.Knowledge (Knowledge, envelopeIn, envelopeOut, facts, factCount, holdsOf, lacksOf, solutionIfKnown)
 import Kibitzer.Observe (Perspective(..))
-import Kibitzer.Player (PlayerCount, PlayerId, allPlayers, defaultPlayerCount, mkPlayerCount)
+import Kibitzer.Player (PlayerCount, PlayerId, allPlayers, defaultPlayerCount, mkPlayerCount, playerCountToInt)
 import Kibitzer.Policy (randomLegalPolicy)
 import Kibitzer.Rng (mkSeed)
 import Node.Process (argv)
@@ -42,7 +46,9 @@ main = do
       i <- Array.elemIndex "--players" rest
       n <- Int.fromString =<< Array.index rest (i + 1)
       mkPlayerCount n
-  run count movement seedInt
+  case Array.head rest of
+    Just "stats" -> runStats (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
+    _ -> run count movement seedInt
 
 run :: PlayerCount -> Boolean -> Int -> Effect Unit
 run count movement seedInt = do
@@ -91,6 +97,108 @@ printHands result =
 
   handOf :: PlayerId -> Array Card
   handOf p = Set.toUnfoldable (fromMaybe Set.empty (Map.lookup p hands))
+
+-- | One row of the stats table: everything is kept as running Int sums;
+-- | means are computed at render time.
+type RowStats =
+  { games :: Int
+  , events :: Int
+  , suggestions :: Int
+  , winTurns :: Int
+  , facts :: Int
+  , envKnown :: Int
+  , solved :: Int
+  , unfinished :: Int
+  }
+
+runStats :: Int -> Effect Unit
+runStats n = do
+  log
+    ( "kibitzer stats — " <> show n <> " seeds per row (seeds 1.." <> show n
+        <> "), policy: randomLegal, watcher sees 0 cards throughout\n"
+    )
+  log statsHeader
+  for_ statsConfigs \(Tuple count movement) ->
+    log (renderStatsRow count movement (rowFor count movement n))
+
+statsConfigs :: Array (Tuple PlayerCount Boolean)
+statsConfigs = do
+  count <- Array.mapMaybe mkPlayerCount [ 3, 4, 5, 6 ]
+  movement <- [ false, true ]
+  pure (Tuple count movement)
+
+rowFor :: PlayerCount -> Boolean -> Int -> RowStats
+rowFor count movement n = Array.foldl accumulate empty (Array.range 1 n)
+  where
+  empty =
+    { games: 0, events: 0, suggestions: 0, winTurns: 0
+    , facts: 0, envKnown: 0, solved: 0, unfinished: 0
+    }
+
+  accumulate acc seedInt =
+    let
+      result = simulate
+        { playerCount: count
+        , seed: mkSeed seedInt
+        , policy: randomLegalPolicy
+        , maxTurns: 600
+        , movement
+        }
+      watcher = knowledgeAt count Watcher (Array.length result.log) result.log
+      isSuggestion = case _ of
+        SuggestionMade _ -> true
+        _ -> false
+    in
+      { games: acc.games + 1
+      , events: acc.events + Array.length result.log
+      , suggestions: acc.suggestions + Array.length (Array.filter isSuggestion result.log)
+      , winTurns: acc.winTurns + result.turns
+      , facts: acc.facts + factCount watcher
+      , envKnown: acc.envKnown + Set.size (envelopeIn watcher)
+      , solved: acc.solved + if isJust (solutionIfKnown watcher) then 1 else 0
+      , unfinished: acc.unfinished + if isJust result.winner then 0 else 1
+      }
+
+statsHeader :: String
+statsHeader =
+  padRight 8 "players"
+    <> padRight 7 "moves"
+    <> padLeft 12 "mean-events"
+    <> padLeft 11 "mean-suggs"
+    <> padLeft 14 "mean-win-turn"
+    <> padLeft 14 "watcher-facts"
+    <> padLeft 12 "env-known/3"
+    <> padLeft 9 "solved%"
+    <> padLeft 11 "unfinished"
+
+renderStatsRow :: PlayerCount -> Boolean -> RowStats -> String
+renderStatsRow count movement row =
+  padRight 8 (show (playerCountToInt count))
+    <> padRight 7 (if movement then "on" else "off")
+    <> padLeft 12 (meanOf row.events)
+    <> padLeft 11 (meanOf row.suggestions)
+    <> padLeft 14 (meanOf row.winTurns)
+    <> padLeft 14 (meanOf row.facts)
+    <> padLeft 12 (meanOf row.envKnown)
+    <> padLeft 9 (percentOf row.solved)
+    <> padLeft 11 (show row.unfinished)
+  where
+  meanOf total = fixed1 total row.games
+  percentOf count' = show ((100 * count' + row.games / 2) / max 1 row.games) <> "%"
+
+-- | `fixed1 total n` — total/n to one decimal place, without printf.
+fixed1 :: Int -> Int -> String
+fixed1 total n =
+  let
+    tenths = (10 * total + n / 2) / max 1 n
+  in
+    show (tenths / 10) <> "." <> show (tenths `mod` 10)
+
+padLeft :: Int -> String -> String
+padLeft width s = power " " (max 0 (width - String.length s)) <> s
+
+padRight :: Int -> String -> String
+padRight width s = s <> power " " (max 0 (width - String.length s))
 
 -- | The classic detective notepad: a row per card, a column per player
 -- | plus the envelope. ✓ known held, ✗ known not held, · unknown.
