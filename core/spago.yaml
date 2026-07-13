@@ -6,6 +6,7 @@ package:
     The watcher never sees a card; the facts add up anyway.
   dependencies:
     - arrays
+    - control
     - either
     - foldable-traversable
     - integers

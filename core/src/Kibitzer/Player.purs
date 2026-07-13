@@ -5,6 +5,7 @@ module Kibitzer.Player
   ( PlayerId(..)
   , PlayerCount
   , mkPlayerCount
+  , defaultPlayerCount
   , playerCountToInt
   , allPlayers
   , nextPlayer
@@ -42,6 +43,11 @@ mkPlayerCount :: Int -> Maybe PlayerCount
 mkPlayerCount n
   | n >= 3 && n <= 6 = Just (PlayerCount n)
   | otherwise = Nothing
+
+-- | Four seats. Uneven hands (5,5,4,4) exercise the hand-size reasoning,
+-- | and four players give the watcher a well-paced game to solve.
+defaultPlayerCount :: PlayerCount
+defaultPlayerCount = PlayerCount 4
 
 playerCountToInt :: PlayerCount -> Int
 playerCountToInt (PlayerCount n) = n

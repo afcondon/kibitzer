@@ -1,0 +1,18 @@
+package:
+  name: kibitzer-example
+  description: CLI transcript demo — run a seeded game, print the watcher's inferences.
+  dependencies:
+    - arrays
+    - console
+    - effect
+    - foldable-traversable
+    - integers
+    - kibitzer-core
+    - maybe
+    - node-process
+    - ordered-collections
+    - prelude
+    - strings
+    - tuples
+  run:
+    main: Example.Main
