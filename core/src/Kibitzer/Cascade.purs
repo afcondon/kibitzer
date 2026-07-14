@@ -9,6 +9,7 @@ module Kibitzer.Cascade
   ( CascadeEdge
   , CascadeFrame
   , cascadeTimeline
+  , globalDepths
   ) where
 
 import Prelude
@@ -45,6 +46,21 @@ cascadeTimeline count perspective log =
       Array.cons (restFrame head) (map frame (Array.zip minds (Array.drop 1 minds)))
   where
   minds = knowledgeTimeline count perspective log
+
+-- | Depth of every fact in the whole game's derivation DAG (longest
+-- | premise chain from direct observations). Premises always carry
+-- | smaller ids, so one left fold in feed order suffices. This is the
+-- | y-axis of the DAG view; frame-local depths above drive staggering.
+globalDepths :: Array Fact -> Map FactId Int
+globalDepths = foldl
+  ( \acc f -> Map.insert f.id
+      ( case Array.mapMaybe (\p -> Map.lookup p acc) f.justification.premises of
+          [] -> 0
+          ds -> 1 + fromMaybe 0 (maximum ds)
+      )
+      acc
+  )
+  Map.empty
 
 -- | A position at which nothing was learned (position 0, always).
 restFrame :: Knowledge -> CascadeFrame

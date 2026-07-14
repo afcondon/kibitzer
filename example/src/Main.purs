@@ -13,6 +13,7 @@ import Prelude
 
 import Data.Array as Array
 import Data.Foldable (for_, traverse_)
+import Example.Skylines (runSkylines)
 import Data.Int as Int
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -50,6 +51,7 @@ main = do
   case Array.head rest of
     Just "stats" -> runStats (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
     Just "corpus" -> runCorpus (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
+    Just "skylines" -> runSkylines
     _ -> run count movement seedInt
 
 run :: PlayerCount -> Boolean -> Int -> Effect Unit

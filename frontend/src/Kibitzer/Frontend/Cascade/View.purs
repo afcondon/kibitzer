@@ -20,6 +20,7 @@ import Data.Set as Set
 import Effect (Effect)
 import Hylograph.Transition.Tick as Tick
 import Kibitzer.Cards (Card)
+import Kibitzer.Cascade (globalDepths)
 import Kibitzer.Describe (describeClaim, describeFact, describeSuggestion, eventRef)
 import Kibitzer.Event (EventId(..), eventIdToInt)
 import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, renderMarks)
@@ -64,20 +65,10 @@ redraw { game, position, wiring, morph, anim, onBar } = renderScene
   allFacts :: Array Fact
   allFacts = fromMaybe [] (map facts (Array.last game.snapshots))
 
-  -- The same marks in their second home: the derivation DAG, feed order
-  -- along x, global derivation depth as the level. Premises only point
-  -- backwards, so one left fold computes every depth.
+  -- the same marks in their second home: the derivation DAG, feed order
+  -- along x, global derivation depth as the level
   dagDepth :: Map FactId Int
-  dagDepth = Array.foldl
-    ( \acc f -> Map.insert f.id
-        ( case Array.mapMaybe (flip Map.lookup acc) f.justification.premises of
-            [] -> 0
-            ds -> 1 + fromMaybe 0 (maximum ds)
-        )
-        acc
-    )
-    Map.empty
-    allFacts
+  dagDepth = globalDepths allFacts
 
   maxDepth :: Int
   maxDepth = fromMaybe 0 (maximum (Map.values dagDepth))
@@ -141,7 +132,7 @@ redraw { game, position, wiring, morph, anim, onBar } = renderScene
       Just p -> Just (Tick.lerpClamped 0.0 0.75 (Tick.easeOutCubic (clamp 0.0 1.0 p)))
       Nothing ->
         let
-          settled = max (if wiring then 0.12 else 0.0) (0.5 * m)
+          settled = max (if wiring then 0.12 else 0.0) (0.3 * m)
         in
           if settled > 0.005 then Just settled else Nothing
     pure

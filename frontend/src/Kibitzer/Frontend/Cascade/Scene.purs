@@ -304,10 +304,11 @@ dagAxisTree opacity levels =
           , F.opacity (show opacity)
           ]
           []
+      -- captions at the right edge, clear of the crowded ground row
       , elem Text
-          [ F.x 36.0
-          , F.y (l.y - 8.0)
-          , F.textAnchor "start"
+          [ F.x (svgWidthLocal - 36.0)
+          , F.y (l.y - 6.0)
+          , F.textAnchor "end"
           , F.fontSize "10"
           , F.fill "#767676"
           , F.opacity (show opacity)
