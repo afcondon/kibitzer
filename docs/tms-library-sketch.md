@@ -51,6 +51,31 @@ lattice). ShapedSteer is also where **retraction finally matters**
 push the kernel from our monotone special case toward full Doyle, and
 the planned Bayesian layer pushes the same direction.
 
+## The pair of libraries (Andrew, 2026-07-14)
+
+Two PureScript libraries, both eDSLs, both natural Hylograph clients:
+
+1. **The JTMS library** — layers 1–3 above. As an eDSL: rules declared
+   as data (name + premises pattern + conclusion), with provenance
+   capture, saturation, and the property-test kit generated from the
+   declarations. Rules-as-data also buys generic tracing/profiling and
+   lets the DAG visualization label any domain's rules for free.
+2. **The SMT library** — the Haskell reference is **SBV** (SMT Based
+   Verification, Erkök): a typed symbolic eDSL (`SBool`, `SInt`,
+   `prove`/`sat`) over SMT-LIB. Counsel: port the *shape*, not the
+   codebase — SBV leans hard on Haskell-specific type machinery, and
+   kibitzer's actual needs are a small clean subset: finite domains,
+   cardinality/pseudo-boolean sums, push/pop, model harvesting, unsat
+   cores. Backend: SMT-LIB text over FFI (z3 as child process on Node;
+   z3-wasm in the browser for the live-oracle flex). Kibitzer's
+   `optimal_watcher.py` is the requirements document — port it as the
+   library's first client and the API writes itself.
+
+The Hylograph fit is the same for both: each produces an inherently
+visualizable structure (justification DAGs; model sets / unsat cores),
+and kibitzer already renders prototypes of each (the skyline; the
+collapsing worlds).
+
 ## Timing
 
 Rule of three (or at least two): extract when ShapedSteer reaches for
