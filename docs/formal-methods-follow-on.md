@@ -87,6 +87,50 @@ Four things this bought us:
    players" is a property of the information flow, not an artifact of
    our engine's incompleteness.
 
+## The behavioral channel (Andrew's question, 2026-07-14): modelling *choices*
+
+Can the watcher gain by modelling what players' suggestion choices
+reveal about what *they* know? Three grades, in increasing power:
+
+1. **Classic mode, stock policy: provably zero.** Suggestions are
+   uniform random — a choice independent of knowledge carries no
+   information about it. Opening the channel requires strategic
+   players first (parking-lot item).
+2. **Movement mode leaks today.** `chooseDestination` dogfoods the
+   player's notebook (heads for rooms whose envelope status they
+   haven't settled) — every journey publicly states "my notebook has
+   not excluded this room."
+3. **Accusation silence — the strong channel, free under any policy
+   with a known accusation rule.** Every turn a player does *not*
+   accuse says: their private stream does not yet determine the
+   envelope. The watcher knows the public part of that stream and the
+   inference rules, so silence constrains the identities of privately
+   shown cards. Epistemic logic, Muddy-Children flavour.
+
+**"Does it outperform SMT?" dissolves**: SMT is a solver, not a
+ceiling. Our Z3 watcher is optimal *for the transcript-only theory*;
+each channel is a new policy axiom, and Z3-with-policy-axioms strictly
+dominates the current optimal (never fewer certainties). Encoding
+challenge: a player's knowledge is a saturation fixpoint — the
+tractable version encodes a sound under-approximation (the player's
+unit-propagation closure over candidate hidden cards), giving
+sound-but-partial silence constraints. The measurable experiment:
+optimal-with-silence vs optimal, per config.
+
+**Probabilistic variant**: weight transcript-consistent deals by choice
+likelihood under the policy; posteriors beat every deductive watcher on
+early-guess curves but never mint a certainty — and a posterior is a
+hunch, so it must live in its own display layer ("the watcher's
+suspicions"), never in the notebook.
+
+**Casualties**: player ⊇ watcher does not survive as stated (a
+behavioral watcher can know things about C's hand that player B
+doesn't, by modelling C's silence) — it is a theorem about the
+deductive engine only. The demo's moral sharpens to a hierarchy:
+content privacy < metadata privacy < behavioral privacy — encrypt the
+cards, anonymize the questions, and *when you choose to act* still
+testifies.
+
 ## The question
 
 Kibitzer's correctness story is four QuickCheck properties (soundness,
