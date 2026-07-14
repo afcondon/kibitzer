@@ -11,7 +11,9 @@ module Kibitzer.Frontend.Cascade.View
 import Prelude
 
 import Data.Array as Array
+import Data.Foldable (maximum)
 import Data.Int as Int
+import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Set as Set
@@ -31,14 +33,20 @@ redraw
   :: { game :: Game
      , position :: Int
      , wiring :: Boolean
+     , morph :: Number -- 0 = notebook table, 1 = derivation DAG
      , anim :: CascadeAnim
      , onBar :: Int -> Effect Unit
      }
   -> Effect Unit
-redraw { game, position, wiring, anim, onBar } = renderScene
-  { marks: renderMarks count visible anim
+redraw { game, position, wiring, morph, anim, onBar } = renderScene
+  { count
+  , marks
   , edges
   , brackets
+  , bracketFade: 1.0 - m
+  , chromeFade: 1.0 - m
+  , dagLevels
+  , dagOpacity: m * 0.85
   , rail: eventLabel position (currentEvent game position)
   , verdict: verdictFor game position
   , strip: stripFor game position
@@ -50,12 +58,76 @@ redraw { game, position, wiring, anim, onBar } = renderScene
   visible = facts knowledge
   visibleCount = Array.length visible
 
+  m = Tick.easeInOutCubic (clamp 0.0 1.0 morph)
+
   -- every fact of the finished game, indexable by dense FactId
   allFacts :: Array Fact
   allFacts = fromMaybe [] (map facts (Array.last game.snapshots))
 
+  -- The same marks in their second home: the derivation DAG, feed order
+  -- along x, global derivation depth as the level. Premises only point
+  -- backwards, so one left fold computes every depth.
+  dagDepth :: Map FactId Int
+  dagDepth = Array.foldl
+    ( \acc f -> Map.insert f.id
+        ( case Array.mapMaybe (flip Map.lookup acc) f.justification.premises of
+            [] -> 0
+            ds -> 1 + fromMaybe 0 (maximum ds)
+        )
+        acc
+    )
+    Map.empty
+    allFacts
+
+  maxDepth :: Int
+  maxDepth = fromMaybe 0 (maximum (Map.values dagDepth))
+
+  levelGap :: Number
+  levelGap = min 130.0 (440.0 / Int.toNumber (max 1 maxDepth))
+
+  levelY :: Int -> Number
+  levelY d = 570.0 - Int.toNumber d * levelGap
+
+  dagLevels :: Array { y :: Number, label :: String }
+  dagLevels = Array.range 0 maxDepth <#> \d ->
+    { y: levelY d
+    , label: if d == 0 then "observed directly" else "derived, " <> show d <> " deep"
+    }
+
+  dagPosOf :: Fact -> { x :: Number, y :: Number }
+  dagPosOf f =
+    let
+      FactId n = f.id
+      total = Int.toNumber (max 1 (Array.length allFacts))
+    in
+      { x: 40.0 + (Int.toNumber n + 0.5) / total * (L.svgWidth - 80.0)
+      , y: levelY (fromMaybe 0 (Map.lookup f.id dagDepth))
+      }
+
+  -- a fact's home for this frame: between its notebook cell and its DAG slot
+  posOf :: Fact -> { x :: Number, y :: Number }
+  posOf f =
+    let
+      t = L.claimCell count f.claim
+      g = dagPosOf f
+    in
+      { x: Tick.lerp t.x g.x m, y: Tick.lerp t.y g.y m }
+
+  marks =
+    Array.zipWith
+      ( \f rm ->
+          let p = posOf f in rm { mark = rm.mark { x = p.x, y = p.y } }
+      )
+      visible
+      baseMarks
+      <> Array.drop (Array.length visible) baseMarks
+    where
+    baseMarks = renderMarks count visible anim
+
   -- a hairline is bright while its conclusion flies in, then settles to
   -- faint persistent wiring (or nothing, with the toggle off)
+  -- in the DAG the edges ARE the picture, so the morph raises them even
+  -- with the wiring toggle off
   edges :: Array EdgeLine
   edges = game.allEdges # Array.mapMaybe \e -> do
     let FactId toN = e.to
@@ -63,11 +135,15 @@ redraw { game, position, wiring, anim, onBar } = renderScene
     guardVisible toN
     fromFact <- Array.index allFacts fromN
     toFact <- Array.index allFacts toN
-    let from = L.claimCell count fromFact.claim
-    let to = L.claimCell count toFact.claim
+    let from = posOf fromFact
+    let to = posOf toFact
     opacity <- case Map.lookup ("f" <> show toN) anim.entering of
       Just p -> Just (Tick.lerpClamped 0.0 0.75 (Tick.easeOutCubic (clamp 0.0 1.0 p)))
-      Nothing -> if wiring then Just 0.12 else Nothing
+      Nothing ->
+        let
+          settled = max (if wiring then 0.12 else 0.0) (0.5 * m)
+        in
+          if settled > 0.005 then Just settled else Nothing
     pure
       { key: "e" <> show fromN <> "-" <> show toN
       , x1: from.x

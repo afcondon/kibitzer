@@ -55,6 +55,8 @@ type State =
   , animPending :: Boolean -- an animation frame is already scheduled
   , animListener :: Maybe (HS.Listener Action)
   , wiring :: Boolean -- keep settled provenance hairlines visible
+  , dagView :: Boolean -- grid sub-view: morph the notebook into the derivation DAG
+  , dagMorph :: Number -- 0 = table, 1 = DAG; animated between
   , packView :: Boolean -- Cascade tab: possibility packs (true) or the grid
   , simHandle :: Maybe (SimulationHandle PackRow)
   , packStates :: Map Int PossInfo -- possibility states at the current position
@@ -78,6 +80,7 @@ data Action
   | Tick
   | AnimTick
   | ToggleWiring Boolean
+  | ToggleDag Boolean
   | SetPackView Boolean
 
 currentKnowledge :: Game -> Int -> Knowledge

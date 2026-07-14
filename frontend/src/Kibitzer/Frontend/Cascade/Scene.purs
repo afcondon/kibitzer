@@ -11,7 +11,6 @@ module Kibitzer.Frontend.Cascade.Scene
   , SceneInput
   , renderChrome
   , renderScene
-  , clearScene
   , clearView
   , eventLabel
   , railTree
@@ -55,9 +54,14 @@ type Bracket = { key :: String, x :: Number, ys :: Array Number }
 type StripBar = { index :: Int, count :: Int, current :: Boolean }
 
 type SceneInput =
-  { marks :: Array RenderMark
+  { count :: PlayerCount
+  , marks :: Array RenderMark
   , edges :: Array EdgeLine
   , brackets :: Array Bracket
+  , bracketFade :: Number -- 1 = table view, 0 = fully morphed away
+  , chromeFade :: Number -- ditto, for the notebook grid itself
+  , dagLevels :: Array { y :: Number, label :: String }
+  , dagOpacity :: Number -- the DAG axis fades in as the grid fades out
   , rail :: String
   , verdict :: Verdict
   , strip :: Array StripBar
@@ -99,24 +103,15 @@ renderChrome count = do
 
 renderScene :: SceneInput -> Effect Unit
 renderScene input = do
+  _ <- rerender "#cascade-chrome"
+    (elem Group [ F.opacity (show input.chromeFade) ] (gridChrome input.count))
+  _ <- rerender "#cascade-dagaxis" (dagAxisTree input.dagOpacity input.dagLevels)
   _ <- rerender "#cascade-edges" (edgesTree input.edges)
-  _ <- rerender "#cascade-brackets" (bracketsTree input.brackets)
+  _ <- rerender "#cascade-brackets" (bracketsTree input.bracketFade input.brackets)
   _ <- rerender "#cascade-marks" (marksTree input.marks)
   _ <- rerender "#cascade-rail" (railTree input.rail input.verdict)
   _ <- rerender "#cascade-strip" (stripTree input.onBar input.strip)
   pure unit
-
--- | Empty every moving layer (leaving chrome) — used on re-deal.
-clearScene :: Effect Unit
-clearScene = renderScene
-  { marks: []
-  , edges: []
-  , brackets: []
-  , rail: ""
-  , verdict: Working ""
-  , strip: []
-  , onBar: \_ -> pure unit
-  }
 
 chromeTree :: PlayerCount -> Tree
 chromeTree count =
@@ -125,7 +120,9 @@ chromeTree count =
     , F.attr "id" "cascade-svg"
     , F.preserveAspectRatio "xMidYMid meet"
     ]
-    [ elem Group [ F.attr "id" "cascade-chrome" ] (gridChrome count)
+    [ elem Group [ F.attr "id" "cascade-chrome" ]
+        [ elem Group [ F.opacity "1" ] (gridChrome count) ]
+    , elem Group [ F.attr "id" "cascade-dagaxis" ] []
     , elem Group [ F.attr "id" "cascade-edges" ] []
     , elem Group [ F.attr "id" "cascade-brackets" ] []
     , elem Group [ F.attr "id" "cascade-marks" ] []
@@ -259,8 +256,8 @@ edgesTree edges =
           [ elem Title [ staticStr "textContent" e.tip ] [] ]
       ]
 
-bracketsTree :: Array Bracket -> Tree
-bracketsTree brackets =
+bracketsTree :: Number -> Array Bracket -> Tree
+bracketsTree fade brackets =
   forEach "brackets" Group brackets _.key \b ->
     let
       yTop = fromMaybe 0.0 (minimum b.ys) - 8.0
@@ -275,7 +272,7 @@ bracketsTree brackets =
         , F.stroke accent
         , F.strokeWidth 1.0
         , staticStr "stroke-dasharray" "2 4"
-        , F.opacity "0.35"
+        , F.opacity (show (0.35 * fade))
         ]
         []
       tick y = elem Line
@@ -285,11 +282,41 @@ bracketsTree brackets =
         , F.y2 y
         , F.stroke accent
         , F.strokeWidth 1.4
-        , F.opacity "0.6"
+        , F.opacity (show (0.6 * fade))
         ]
         []
     in
       elem Group [] (Array.cons spine (map tick b.ys))
+
+-- | The DAG view's chrome: one hairline + caption per derivation level,
+-- | fading in as the notebook fades out.
+dagAxisTree :: Number -> Array { y :: Number, label :: String } -> Tree
+dagAxisTree opacity levels =
+  forEach "dagaxis" Group levels (\l -> "lvl" <> l.label) \l ->
+    elem Group []
+      [ elem Line
+          [ F.x1 36.0
+          , F.y1 l.y
+          , F.x2 (svgWidthLocal - 36.0)
+          , F.y2 l.y
+          , F.stroke hairline
+          , F.strokeWidth 1.0
+          , F.opacity (show opacity)
+          ]
+          []
+      , elem Text
+          [ F.x 36.0
+          , F.y (l.y - 8.0)
+          , F.textAnchor "start"
+          , F.fontSize "10"
+          , F.fill "#767676"
+          , F.opacity (show opacity)
+          , staticStr "textContent" l.label
+          ]
+          []
+      ]
+  where
+  svgWidthLocal = L.svgWidth
 
 railTree :: String -> Verdict -> Tree
 railTree label verdict =

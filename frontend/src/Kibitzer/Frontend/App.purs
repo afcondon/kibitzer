@@ -71,6 +71,8 @@ component = H.mkComponent
       , animPending: false
       , animListener: Nothing
       , wiring: true
+      , dagView: false
+      , dagMorph: 0.0
       , packView: true
       , simHandle: Nothing
       , packStates: Map.empty
@@ -148,13 +150,23 @@ handleAction = case _ of
     when (st.tab == CascadeTab) do
       if st.packView then packsAnimFrame
       else do
-        let anim = tickAnim enterDelta st.cascadeAnim
-        H.modify_ _ { cascadeAnim = anim }
+        let
+          target = if st.dagView then 1.0 else 0.0
+          step = Tick.ticksForDuration 550
+          morph
+            | st.dagMorph < target = min target (st.dagMorph + step)
+            | otherwise = max target (st.dagMorph - step)
+          anim = tickAnim enterDelta st.cascadeAnim
+        H.modify_ _ { cascadeAnim = anim, dagMorph = morph }
         redrawCascade
-        when (animActive anim) scheduleAnimFrame
+        when (animActive anim || morph /= target) scheduleAnimFrame
   ToggleWiring b -> do
     H.modify_ _ { wiring = b }
     redrawCascade
+  -- the morph itself is animated by the frame loop; this just sets the target
+  ToggleDag b -> do
+    H.modify_ _ { dagView = b }
+    scheduleAnimFrame
   where
   moveTo n = do
     st <- H.get
@@ -205,6 +217,7 @@ redrawCascade = do
         { game
         , position: st.position
         , wiring: st.wiring
+        , morph: st.dagMorph
         , anim: st.cascadeAnim
         , onBar: \i -> HS.notify listener (Scrub i)
         }
@@ -223,7 +236,10 @@ initCascadeView = do
       liftEffect clearView
       if st.packView then initPacks game
       else do
-        H.modify_ _ { cascadeAnim = emptyAnim }
+        H.modify_ _
+          { cascadeAnim = emptyAnim
+          , dagMorph = if st.dagView then 1.0 else 0.0
+          }
         liftEffect (renderChrome game.result.playerCount)
         redrawCascade
 
@@ -552,6 +568,14 @@ gridLegend st =
           , HE.onChecked ToggleWiring
           ]
       , HH.text "wiring"
+      ]
+  , HH.label [ HP.class_ (HH.ClassName "toggle") ]
+      [ HH.input
+          [ HP.type_ HP.InputCheckbox
+          , HP.checked st.dagView
+          , HE.onChecked ToggleDag
+          ]
+      , HH.text "DAG"
       ]
   ]
 
