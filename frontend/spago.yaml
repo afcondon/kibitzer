@@ -9,6 +9,7 @@ package:
     - aff
     - arrays
     - console
+    - const
     - effect
     - foldable-traversable
     - foreign

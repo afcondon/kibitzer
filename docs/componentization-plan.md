@@ -4,12 +4,31 @@
 component; this captures the restructuring before the next growth
 spurt (Methods tab, worlds canvas, perspective switcher).*
 
-## 1. Halogen child components
+## 1. Halogen child components — DONE 2026-07-14 (overnight)
 
-Today `Kibitzer.Frontend.App` is one `mkComponent` with pure render
-helpers. That was right at three panes; it is wrong at seven-and-
-growing. Target decomposition — actual components with slots, so
-pieces move between layouts without refactoring:
+Landed as `Kibitzer.Frontend.Component.{TransportBar, ControlPanel,
+CascadeHost}`; App is now genuinely just the store
+(config/game/position/playing/tab/packView), `Types` is pure data
+(Game + Tab + accessors), and `View.Timeline` is gone. Decisions made
+in the doing:
+
+- **`packView` is a controlled input** on CascadeHost (with a
+  `ViewChanged` output), not local state — tab switches destroy and
+  remount the component, and the Packs|Grid choice must survive them.
+  The grid sub-toggles (wiring, DAG) stay local and reset on remount.
+- **ControlPanel owns the seed *draft*** (typed-but-uncommitted text);
+  outputs are whole configurations (`DealRequested`/`RandomRequested`),
+  so the parent never sees form fragments.
+- **TransportBar collapses to two intents** (`Scrubbed Int`,
+  `PlayToggled`) — step/jump are just scrubs to computed positions,
+  clamped by the parent.
+- **Game identity for `receive`**: `Game` gained a `movement` field so
+  `gameKey = (seed, players, movement)` detects a genuine re-deal (the
+  simulation is pure, so equal keys mean identical games).
+- Browser smokes now live in `smoke/` (grid 18 / packs 12 / dag 11 /
+  controls 14 — the last purpose-built for the new components).
+
+Original decomposition target (as built):
 
 | component | input | output | notes |
 |---|---|---|---|
