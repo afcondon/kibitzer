@@ -149,6 +149,37 @@ policy is *world-model*, and neural methods enter at its third rung.
 The metric that justifies any of it: watcher win rate — solved strictly
 before the winning accusation.
 
+## The Methods tab (page plan, 2026-07-14)
+
+The site never had a concrete plan for showing the other technologies —
+just "tabs about PureScript, SMT, Lean etc". The plan is now: one
+**Methods** tab structured as the ladder of quantifier strength, each
+rung getting the question it answers, its artifact, and where possible
+a visualization instead of a table. TLA+/Lean rungs open as honest
+stubs until built. The SMT rung's visual candidates, in build order:
+
+1. **Side-by-side twins** (Andrew's form): the same diagram rendered
+   twice — our watcher and the Z3-optimal watcher — scrubbed in
+   lockstep from precomputed per-position traces for curated seeds
+   (~44 literals × ~80 positions ≈ minutes offline per seed). No new
+   mark type; the gap is read by comparison, and its sparseness (96–99%)
+   is the visible punchline.
+2. **The collapsing worlds**: rows = complete deals still consistent
+   with the transcript (Z3 model sampling with blocking clauses),
+   columns = the 21 cards coloured by location; certainty = a column
+   gone monochrome across all worlds. Prototyped with real data in
+   `smt/worlds_mock.py` (seed 42 @4p: >1500 → 1484 → 154 worlds; 5
+   columns settle — one more than the engine, the gap made visible).
+   The "worlds remaining" log strip pairs with the facts sparkline:
+   possibilities destroyed vs information gained.
+3. **Table ⇄ DAG morph**: the grid's wiring IS the derivation DAG
+   (premises, acyclic by id order) with nodes pinned to notebook cells;
+   a DAG layout (depth as layers) is a second position map, and the
+   Tick pattern morphs between the two by lerping marks. The state view
+   and the argument view, shown to be the same object. Later, Z3 unsat
+   cores render on the same canvas: the solver's argument beside the
+   engine's.
+
 ## The question
 
 Kibitzer's correctness story is four QuickCheck properties (soundness,
