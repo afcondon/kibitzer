@@ -41,10 +41,11 @@ import Kibitzer.Frontend.View.Board (boardPane)
 import Kibitzer.Frontend.View.Code (codePage)
 import Kibitzer.Frontend.View.Feed (feedPane)
 import Kibitzer.Frontend.View.Notebook (notebookPane)
-import Kibitzer.Frontend.View.Timeline (timelinePane)
+import Kibitzer.Frontend.View.Terminal (terminalPane)
+import Kibitzer.Frontend.View.Timeline (transportBar)
 import Kibitzer.Game (simulate)
 import Kibitzer.Infer (knowledgeTimeline)
-import Kibitzer.Knowledge (factCount, facts)
+import Kibitzer.Knowledge (facts)
 import Kibitzer.Observe (Perspective(..))
 import Kibitzer.Player (defaultPlayerCount, mkPlayerCount, playerCountToInt)
 import Kibitzer.Policy (randomLegalPolicy)
@@ -428,53 +429,44 @@ render st =
       -- childless and never patches inside
       CascadeTab ->
         [ header st
-        , HH.main [ HP.class_ (HH.ClassName "cascade-main") ]
-            [ HH.div [ HP.class_ (HH.ClassName "cascade-legend") ]
-                ( [ viewButton st true "Packs"
-                  , viewButton st false "Grid"
-                  , HH.span [ HP.class_ (HH.ClassName "legend-sep") ] []
-                  ]
-                    <> (if st.packView then packsLegend else gridLegend st)
-                )
-            , HH.div [ HP.id "cascade-view" ] []
-            ]
         , case st.game of
-            Nothing -> HH.text ""
-            Just game -> timelinePane game st.position st.playing
+            Nothing -> HH.main_ [ HH.text "Dealing…" ]
+            Just game ->
+              HH.main [ HP.class_ (HH.ClassName "split3") ]
+                [ tableColumn st game
+                , terminalPane game st.position
+                , HH.section [ HP.class_ (HH.ClassName "cascade-col") ]
+                    [ HH.div [ HP.class_ (HH.ClassName "cascade-toolbar") ]
+                        ( [ viewButton st true "Packs"
+                          , viewButton st false "Grid"
+                          , HH.span [ HP.class_ (HH.ClassName "legend-sep") ] []
+                          ]
+                            <> (if st.packView then packsLegend else gridLegend st)
+                        )
+                    , HH.div [ HP.id "cascade-view" ] []
+                    ]
+                ]
         ]
       PlayTab ->
         [ header st
         , case st.game of
             Nothing -> HH.main_ [ HH.text "Dealing…" ]
             Just game ->
-              HH.main [ HP.class_ (HH.ClassName "split") ]
-                [ boardPane game st.position
+              HH.main [ HP.class_ (HH.ClassName "split3") ]
+                [ tableColumn st game
+                , terminalPane game st.position
                 , HH.div [ HP.class_ (HH.ClassName "watcher-pane") ]
                     [ notebookPane game st.position
                     , feedPane game st.position
                     ]
                 ]
-        , case st.game of
-            Nothing -> HH.text ""
-            Just game -> timelinePane game st.position st.playing
         ]
 
-header :: forall m. State -> H.ComponentHTML Action () m
-header st =
-  HH.header_
-    [ HH.div [ HP.class_ (HH.ClassName "masthead") ]
-        [ HH.h1_ [ HH.text "kibitzer" ]
-        , HH.p [ HP.class_ (HH.ClassName "strap") ]
-            [ HH.text "A Cluedo watcher who never sees a card — and solves the murder from metadata alone." ]
-        , HH.nav [ HP.class_ (HH.ClassName "tabs") ]
-            [ tabButton st PlayTab "Game"
-            , tabButton st CascadeTab "Cascade"
-            , tabButton st AboutTab "About"
-            , tabButton st CodeTab "The code"
-            ]
-        ]
-    , HH.div [ HP.class_ (HH.ClassName "counter") ] (counter st)
-    , HH.div [ HP.class_ (HH.ClassName "controls") ]
+-- | The left column: the game's own controls above the ground truth.
+tableColumn :: forall m. State -> Game -> H.ComponentHTML Action () m
+tableColumn st game =
+  HH.div [ HP.class_ (HH.ClassName "table-col") ]
+    [ HH.div [ HP.class_ (HH.ClassName "controls") ]
         [ HH.label_ [ HH.text "Seed" ]
         , HH.input
             [ HP.value st.seedInput
@@ -501,6 +493,26 @@ header st =
         , HH.button [ HE.onClick \_ -> NewGame ] [ HH.text "Deal" ]
         , HH.button [ HE.onClick \_ -> RandomSeed ] [ HH.text "Random" ]
         ]
+    , boardPane game st.position
+    ]
+
+header :: forall m. State -> H.ComponentHTML Action () m
+header st =
+  HH.header_
+    [ HH.div [ HP.class_ (HH.ClassName "masthead") ]
+        [ HH.h1_ [ HH.text "kibitzer" ]
+        , HH.p [ HP.class_ (HH.ClassName "strap") ]
+            [ HH.text "A Cluedo watcher who never sees a card — and solves the murder from metadata alone." ]
+        , HH.nav [ HP.class_ (HH.ClassName "tabs") ]
+            [ tabButton st PlayTab "Game"
+            , tabButton st CascadeTab "Cascade"
+            , tabButton st AboutTab "About"
+            , tabButton st CodeTab "The code"
+            ]
+        ]
+    , case st.game of
+        Just game -> transportBar game st.position st.playing
+        Nothing -> HH.text ""
     ]
 
 viewButton :: forall m. State -> Boolean -> String -> H.ComponentHTML Action () m
@@ -514,21 +526,16 @@ viewButton st packs label =
     ]
     [ HH.text label ]
 
--- | Legend for the possibility packs: each card is a possibility that
--- | may still live in any pack; knowledge only ever removes.
+-- | Legend for the possibility packs. No colour key — the table column's
+-- | card chips carry the same category hues, so the mapping is learned
+-- | from the ground truth itself.
 packsLegend :: forall m. Array (H.ComponentHTML Action () m)
 packsLegend =
-  [ chip (Packs.categoryColour 0) "suspects"
-  , chip (Packs.categoryColour 6) "weapons"
-  , chip (Packs.categoryColour 12) "rooms"
-  , HH.span_ [ HH.text "faint = ruled out here" ]
+  [ HH.span_ [ HH.text "faint = ruled out here" ]
   , HH.span_ [ HH.text "ring = located" ]
   , HH.span [ HP.class_ (HH.ClassName "legend-accent") ]
       [ HH.text "orbit = showed one of these" ]
   ]
-  where
-  chip colour label =
-    HH.span [ HP.style ("color:" <> colour) ] [ HH.text ("● " <> label) ]
 
 gridLegend :: forall m. State -> Array (H.ComponentHTML Action () m)
 gridLegend st =
@@ -557,17 +564,3 @@ tabButton st tab label =
     ]
     [ HH.text label ]
 
-counter :: forall m. State -> Array (H.ComponentHTML Action () m)
-counter st = case st.game of
-  Nothing -> []
-  Just game ->
-    [ HH.div [ HP.class_ (HH.ClassName "stat") ]
-        [ HH.span [ HP.class_ (HH.ClassName "stat-number") ] [ HH.text "0" ]
-        , HH.span [ HP.class_ (HH.ClassName "stat-label") ] [ HH.text "cards seen" ]
-        ]
-    , HH.div [ HP.class_ (HH.ClassName "stat accent") ]
-        [ HH.span [ HP.class_ (HH.ClassName "stat-number") ]
-            [ HH.text (show (factCount (currentKnowledge game st.position))) ]
-        , HH.span [ HP.class_ (HH.ClassName "stat-label") ] [ HH.text "facts inferred" ]
-        ]
-    ]

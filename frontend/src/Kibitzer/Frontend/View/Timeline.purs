@@ -1,20 +1,20 @@
--- | The scrubber. Because every position's knowledge is a precomputed
--- | snapshot, dragging anywhere is instant.
-module Kibitzer.Frontend.View.Timeline (timelinePane) where
+-- | The transport: play controls, scrubber, and position — global
+-- | chrome, living in the header. The event prose that used to ride
+-- | along here now streams in the terminal column.
+module Kibitzer.Frontend.View.Timeline (transportBar) where
 
 import Prelude
 
 import Data.Int as Int
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (fromMaybe)
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Kibitzer.Describe (describeEvent)
-import Kibitzer.Frontend.Types (Action(..), Game, currentEvent, maxPosition)
+import Kibitzer.Frontend.Types (Action(..), Game, maxPosition)
 
-timelinePane :: forall w. Game -> Int -> Boolean -> HH.HTML w Action
-timelinePane game position playing =
-  HH.footer [ HP.class_ (HH.ClassName "timeline") ]
+transportBar :: forall w. Game -> Int -> Boolean -> HH.HTML w Action
+transportBar game position playing =
+  HH.div [ HP.class_ (HH.ClassName "transport-bar") ]
     [ HH.div [ HP.class_ (HH.ClassName "transport") ]
         [ button "⏮" JumpStart
         , button "◀" StepBack
@@ -30,15 +30,8 @@ timelinePane game position playing =
         , HE.onValueInput \s -> Scrub (fromMaybe position (Int.fromString s))
         , HP.class_ (HH.ClassName "scrubber")
         ]
-    , HH.div [ HP.class_ (HH.ClassName "timeline-caption") ]
-        [ HH.span [ HP.class_ (HH.ClassName "position") ]
-            [ HH.text (positionLabel <> " / E" <> show (maxPosition game - 1)) ]
-        , HH.span_
-            [ HH.text case currentEvent game position of
-                Just event -> describeEvent event
-                Nothing -> "Start — nothing has happened yet."
-            ]
-        ]
+    , HH.span [ HP.class_ (HH.ClassName "position") ]
+        [ HH.text (positionLabel <> " / E" <> show (maxPosition game - 1)) ]
     ]
   where
   positionLabel = if position == 0 then "—" else "E" <> show (position - 1)
