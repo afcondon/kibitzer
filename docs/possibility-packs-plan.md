@@ -171,6 +171,34 @@ grid view's wiring remains the place to study *why* in full.
   envelope pack solid-count == envelopeIn size, convergence leaves no
   orphans).
 
+## Follow-on: other minds (sketched 2026-07-14, not started)
+
+Andrew: show the watcher's model of each player — the diagram as the
+centre of a small multiple, or shadow clusters per pack. Three shapes,
+ascending cost; the engine is already perspective-parametric
+(`knowledgeTimeline count perspective log`), so player minds are one
+argument away:
+
+1. **Perspective switcher** — click a seat label, re-render the whole
+   diagram from that player's mind (their packs, their convergences,
+   their verdict line). Cheapest; makes player ⊇ watcher visible.
+2. **Small multiples** — mini-rings per perspective around the main
+   one; the watcher-vs-player differential IS the information the
+   behavioral channels would harvest.
+3. **Shadow clusters** — each pack ghosting its owner's world-view.
+   Densest; risks soup (7×7 clusters).
+
+Epistemic care: a player's actual mind is ground truth (left-column
+material); the *watcher's model* of a player's mind is a third object —
+a lower bound from the watcher-visible part of that player's stream —
+and belongs to the behavioral-channel phase
+(docs/formal-methods-follow-on.md), where the small multiple becomes
+the George Smiley board: what I know, what I know they know, the gap
+I'm mining. Sequencing: switcher → small multiples → watcher's-model
+display alongside the silence-axiom experiment. Metric that justifies
+the modelling: watcher win rate (solved strictly before the winning
+accusation — the verdict line already computes it).
+
 ## Verification sketch
 
 Per position, pure invariants the smoke can assert against the DOM:

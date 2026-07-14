@@ -131,6 +131,24 @@ content privacy < metadata privacy < behavioral privacy — encrypt the
 cards, anonymize the questions, and *when you choose to act* still
 testifies.
 
+**Where neural methods enter** (follow-up question, 2026-07-14): not
+here yet. With a known policy and a finite deal space, exact-ish
+Bayesian inference by weighted deal-sampling is tractable, calibrated,
+and explainable — a net only approximates it. NNs win when (a) the
+policy is unknown (human players; learn the behavior model from logs),
+(b) exact computation dies (nested epistemic reasoning over long
+horizons — why poker belief-state agents bolt neural value functions
+onto belief reasoning), or (c) you want amortized inference (a small
+net imitating the sampler for instant posteriors in the UI). Reference
+points: the Hanabi challenge (theory-of-mind benchmark), DeepStack /
+ReBeL (belief states + neural values), Cicero (player world-models as
+the load-bearing part), van Ditmarsch on Cluedo as dynamic epistemic
+logic. So the write-up's ladder gains a second axis: QuickCheck → SMT →
+TLC → Lean is *certainty*; random policy → known policy → learned
+policy is *world-model*, and neural methods enter at its third rung.
+The metric that justifies any of it: watcher win rate — solved strictly
+before the winning accusation.
+
 ## The question
 
 Kibitzer's correctness story is four QuickCheck properties (soundness,
