@@ -60,6 +60,24 @@ Sequencing: define the component boundaries here first (§1), then
 propose the widget API upstream shaped like what kibitzer actually
 needed — requirements from a real client, not speculation.
 
+## 2½. The radial DAG (Andrew, 2026-07-14 — queued)
+
+The layered skyline as a series of orbits: depth becomes radius.
+Orientation choice made by the domain: **observations on the outermost
+ring, derivations collapsing inward, the envelope certainties at the
+bullseye** — the argument literally closes in on the truth, and it
+rhymes with the packs view's envelope-at-centre geometry.
+
+Mechanically this is machinery we already have proven: one filtered
+radial force per depth ring (the packs' orbit trick, N rings instead
+of one), link forces along premise edges so conclusions settle at the
+angular position of their premises, collide for spacing —
+hylograph-simulation end to end. And the morph generalizes: marks now
+have three homes (notebook cell, skyline slot, orbit slot); the morph
+state becomes which position map is active rather than a single 0..1.
+Best sequenced after the componentization refactor (CascadeHost owns
+all three layouts cleanly).
+
 ## 3. The worlds canvas (Methods tab centrepiece)
 
 From the collapsing-worlds illustration (`smt/worlds_mock.py`): animate
