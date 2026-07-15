@@ -24,7 +24,7 @@ import Data.Array as Array
 import Data.Const (Const)
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Set as Set
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (delay)
@@ -38,7 +38,11 @@ import Halogen.Subscription as HS
 import Hylograph.Simulation (Engine(..), SimulationHandle, runSimulation)
 import Hylograph.Transition.RAF as RAF
 import Hylograph.Transition.Tick as Tick
+import Kibitzer.Cascade (globalDepths)
 import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, animActive, emptyAnim, enterDelta, syncAnim, tickAnim)
+import Kibitzer.Frontend.Cascade.Layout (GridLayout(..))
+import Kibitzer.Frontend.Cascade.Radial (RadialRow)
+import Kibitzer.Frontend.Cascade.Radial as Radial
 import Kibitzer.Frontend.Cascade.Scene (clearView, eventLabel, renderChrome)
 import Kibitzer.Frontend.Cascade.View (redraw, stripFor, verdictFor)
 import Kibitzer.Frontend.Packs.Model (PackRow, PossInfo)
@@ -46,8 +50,9 @@ import Kibitzer.Frontend.Packs.Model as Packs
 import Kibitzer.Frontend.Packs.View (PacksAnim)
 import Kibitzer.Frontend.Packs.View as PacksView
 import Kibitzer.Frontend.Types (Game, currentEvent, currentKnowledge)
-import Kibitzer.Knowledge (facts)
+import Kibitzer.Knowledge (Fact, FactId(..), facts)
 import Kibitzer.Player (playerCountToInt)
+import Data.Foldable (maximum)
 
 -- | `packView` arrives from the parent (controlled) so the Packs|Grid
 -- | choice survives tab switches, which destroy and remount this
@@ -65,14 +70,18 @@ type State =
   , position :: Int
   , cascadeAnim :: CascadeAnim
   , animPending :: Boolean -- an animation frame is already scheduled
+  , viewReady :: Boolean -- chrome is in the DOM; false inside initView's teardown window
   , animListener :: Maybe (HS.Listener Action)
   , wiring :: Boolean -- keep settled provenance hairlines visible
-  , dagView :: Boolean -- grid sub-view: morph the notebook into the derivation DAG
-  , dagMorph :: Number -- 0 = table, 1 = DAG; animated between
+  , gridLayout :: GridLayout -- the grid's target arrangement
+  , layoutFrom :: GridLayout -- where the morph started
+  , layoutT :: Number -- morph progress, 0 = from, 1 = to
   , packView :: Boolean -- mirror of the input; packs (true) or the grid
   , simHandle :: Maybe (SimulationHandle PackRow)
   , packStates :: Map Int PossInfo -- possibility states at the current position
   , packsAnim :: PacksAnim
+  , radialHandle :: Maybe (SimulationHandle RadialRow) -- alive while the radial layout is in play
+  , radialPos :: Map Int { x :: Number, y :: Number } -- last-read orbit positions by fact id
   }
 
 data Action
@@ -81,7 +90,7 @@ data Action
   | Receive Input
   | AnimTick
   | ToggleWiring Boolean
-  | ToggleDag Boolean
+  | SetGridLayout GridLayout
   | SetPackView Boolean
   | BarClicked Int
 
@@ -92,14 +101,18 @@ component = H.mkComponent
       , position: input.position
       , cascadeAnim: emptyAnim
       , animPending: false
+      , viewReady: false
       , animListener: Nothing
       , wiring: true
-      , dagView: false
-      , dagMorph: 0.0
+      , gridLayout: TableView
+      , layoutFrom: TableView
+      , layoutT: 1.0
       , packView: input.packView
       , simHandle: Nothing
       , packStates: Map.empty
       , packsAnim: PacksView.emptyPacksAnim
+      , radialHandle: Nothing
+      , radialPos: Map.empty
       }
   , render
   , eval: H.mkEval H.defaultEval
@@ -121,7 +134,9 @@ handleAction = case _ of
     void (H.subscribe emitter)
     H.modify_ _ { animListener = Just listener }
     initView
-  Finalize -> stopPacksSim
+  Finalize -> do
+    stopPacksSim
+    stopRadialSim
   Receive input -> do
     st <- H.get
     H.modify_ _
@@ -141,29 +156,52 @@ handleAction = case _ of
     st <- H.get
     when (b /= st.packView) (H.raise (ViewChanged b))
   -- one animation frame: advance progress, redraw, and keep the loop
-  -- alive only while something is still moving
+  -- alive only while something is still moving. A frame scheduled before
+  -- a view teardown can land while the chrome is gone — the viewReady
+  -- gate drops it; initView restarts whatever loop is needed.
   AnimTick -> do
     H.modify_ _ { animPending = false }
     st <- H.get
-    if st.packView then packsAnimFrame
+    if not st.viewReady then pure unit
+    else if st.packView then packsAnimFrame
     else do
       let
-        target = if st.dagView then 1.0 else 0.0
-        step = Tick.ticksForDuration 550
-        morph
-          | st.dagMorph < target = min target (st.dagMorph + step)
-          | otherwise = max target (st.dagMorph - step)
+        t' = min 1.0 (st.layoutT + Tick.ticksForDuration 550)
         anim = tickAnim enterDelta st.cascadeAnim
-      H.modify_ _ { cascadeAnim = anim, dagMorph = morph }
+      -- read the orbit simulation's live positions while it's in play
+      radialPos <- case st.radialHandle of
+        Just handle -> liftEffect (map Radial.positionMap handle.getNodes)
+        Nothing -> pure st.radialPos
+      alpha <- case st.radialHandle of
+        Just handle -> liftEffect handle.getAlpha
+        Nothing -> pure 0.0
+      H.modify_ _ { cascadeAnim = anim, layoutT = t', radialPos = radialPos }
+      -- fully morphed away from the radial layout: the sim can retire
+      when (t' >= 1.0 && st.gridLayout /= RadialView) stopRadialSim
       redrawCascade
-      when (animActive anim || morph /= target) scheduleAnimFrame
+      when
+        ( animActive anim
+            || t' < 1.0
+            || (st.gridLayout == RadialView && alpha > 0.0015)
+        )
+        scheduleAnimFrame
   ToggleWiring b -> do
     H.modify_ _ { wiring = b }
     redrawCascade
-  -- the morph itself is animated by the frame loop; this just sets the target
-  ToggleDag b -> do
-    H.modify_ _ { dagView = b }
-    scheduleAnimFrame
+  -- the morph itself is animated by the frame loop; this just sets a new
+  -- target. Re-selecting the layout we're mid-flight from just reverses
+  -- the journey; any other target restarts from the current arrangement.
+  SetGridLayout l -> do
+    st <- H.get
+    when (l /= st.gridLayout) do
+      let reversing = l == st.layoutFrom && st.layoutT < 1.0
+      H.modify_ _
+        { gridLayout = l
+        , layoutFrom = st.gridLayout
+        , layoutT = if reversing then 1.0 - st.layoutT else 0.0
+        }
+      when (l == RadialView) ensureRadialSim
+      scheduleAnimFrame
   BarClicked i -> H.raise (ScrubRequested i)
 
 -- | What makes two Game values the same game: the full deal
@@ -182,16 +220,21 @@ gameKey game =
 -- | the current position from scratch — packs or grid, whichever is chosen.
 initView :: forall m. MonadAff m => HostM m
 initView = do
+  H.modify_ _ { viewReady = false }
   H.liftAff (delay (Milliseconds 0.0))
+  stopRadialSim -- a fresh deal or view switch invalidates the orbit sim
   st <- H.get
   liftEffect clearView
   if st.packView then initPacks
   else do
     H.modify_ _
       { cascadeAnim = emptyAnim
-      , dagMorph = if st.dagView then 1.0 else 0.0
+      , layoutFrom = st.gridLayout
+      , layoutT = 1.0
       }
     liftEffect (renderChrome st.game.result.playerCount)
+    H.modify_ _ { viewReady = true }
+    when (st.gridLayout == RadialView) ensureRadialSim
     redrawCascade
 
 -- | Fresh simulation for the possibility packs: chrome, the survivors at
@@ -206,6 +249,7 @@ initPacks = do
     keep = Packs.survivorIds count knowledge
     nodes = Array.filter (\n -> Set.member n.id keep) (Packs.allTemplateNodes count)
   liftEffect (PacksView.renderPacksChrome count)
+  H.modify_ _ { viewReady = true }
   result <- liftEffect $ runSimulation
     { engine: D3
     , setup: Packs.setupFor count (Packs.orbitSets knowledge)
@@ -281,8 +325,9 @@ syncPacksMove = do
       scheduleAnimFrame
 
 -- | A timeline move while the grid is showing: reconcile the animation
--- | state with the fact diff, redraw, and (re)start the frame loop if
--- | anything is now in flight.
+-- | state with the fact diff, keep the orbit simulation's population in
+-- | step if it's alive, redraw, and (re)start the frame loop if anything
+-- | is now in flight.
 syncCascadeMove :: forall m. MonadAff m => Int -> Int -> HostM m
 syncCascadeMove oldPos newPos = do
   st <- H.get
@@ -293,8 +338,90 @@ syncCascadeMove oldPos newPos = do
       (facts (currentKnowledge st.game newPos))
       st.cascadeAnim
   H.modify_ _ { cascadeAnim = anim }
+  syncRadialPopulation
   redrawCascade
-  when (animActive anim) scheduleAnimFrame
+  st' <- H.get
+  when (animActive anim || isJust st'.radialHandle) scheduleAnimFrame
+
+-- | The derivation DAG of the finished game, plus what's visible now —
+-- | everything the radial simulation needs to know.
+radialInputs
+  :: State
+  -> { visible :: Array Fact
+     , depths :: Map FactId Int
+     , maxDepth :: Int
+     , total :: Int
+     }
+radialInputs st =
+  let
+    allFacts = fromMaybe [] (map facts (Array.last st.game.snapshots))
+    depths = globalDepths allFacts
+  in
+    { visible: facts (currentKnowledge st.game st.position)
+    , depths
+    , maxDepth: fromMaybe 0 (maximum (Map.values depths))
+    , total: Array.length allFacts
+    }
+
+-- | Start the orbit simulation at the current position. Nodes spawn at
+-- | their analytic radial positions, so the first frame is already the
+-- | right picture and the forces only refine it.
+ensureRadialSim :: forall m. MonadAff m => HostM m
+ensureRadialSim = do
+  st <- H.get
+  case st.radialHandle of
+    Just _ -> pure unit
+    Nothing -> do
+      let
+        ri = radialInputs st
+        nodes = map (Radial.templateNode ri.depths ri.maxDepth ri.total) ri.visible
+        links = Radial.linksFor ri.visible st.game.allEdges
+      result <- liftEffect $ runSimulation
+        { engine: D3
+        , setup: Radial.setupFor ri.maxDepth
+        , nodes
+        , links
+        , container: "#cascade-svg"
+        , alphaMin: 0.001
+        }
+      H.modify_ _
+        { radialHandle = Just result.handle
+        , radialPos = Radial.positionMap nodes
+        }
+      scheduleAnimFrame
+
+stopRadialSim :: forall m. MonadAff m => HostM m
+stopRadialSim = do
+  st <- H.get
+  case st.radialHandle of
+    Just handle -> do
+      liftEffect handle.stop
+      H.modify_ _ { radialHandle = Nothing, radialPos = Map.empty }
+    Nothing -> pure unit
+
+-- | A scrub while the orbit sim is alive: survivors keep their live
+-- | positions, newborn facts spawn at their analytic slots, the links
+-- | follow the visible premise DAG. `updateData` reheats, so the frame
+-- | loop picks the motion up.
+syncRadialPopulation :: forall m. MonadAff m => HostM m
+syncRadialPopulation = do
+  st <- H.get
+  case st.radialHandle of
+    Nothing -> pure unit
+    Just handle -> do
+      let
+        ri = radialInputs st
+        visibleCount = Array.length ri.visible
+      current <- liftEffect handle.getNodes
+      let
+        currentIds = Set.fromFoldable (map _.id current)
+        kept = Array.filter (\n -> n.id < visibleCount) current
+        fresh = ri.visible
+          # Array.filter (\f -> let FactId n = f.id in not (Set.member n currentIds))
+          # map (Radial.templateNode ri.depths ri.maxDepth ri.total)
+      _ <- liftEffect $ handle.updateData (kept <> fresh)
+        (Radial.linksFor ri.visible st.game.allEdges)
+      pure unit
 
 -- | Schedule exactly one animation frame; its callback re-enters Halogen
 -- | as AnimTick. Self-perpetuating while animations are active — this is
@@ -313,16 +440,17 @@ redrawCascade :: forall m. MonadAff m => HostM m
 redrawCascade = do
   st <- H.get
   case st.animListener of
-    Just listener ->
+    Just listener | st.viewReady ->
       liftEffect $ redraw
         { game: st.game
         , position: st.position
         , wiring: st.wiring
-        , morph: st.dagMorph
+        , layout: { from: st.layoutFrom, to: st.gridLayout, t: st.layoutT }
+        , radialPos: st.radialPos
         , anim: st.cascadeAnim
         , onBar: \i -> HS.notify listener (BarClicked i)
         }
-    Nothing -> pure unit
+    _ -> pure unit
 
 -- | The per-position layers of the packs view (orbit guides, rail,
 -- | verdict, sparkline) — everything that changes on scrub but not
@@ -402,7 +530,11 @@ packsLegend =
 
 gridLegend :: forall m. State -> Array (H.ComponentHTML Action () m)
 gridLegend st =
-  [ HH.span_ [ HH.text "● holds" ]
+  [ layoutButton st TableView "Table"
+  , layoutButton st SkylineView "Skyline"
+  , layoutButton st RadialView "Orbits"
+  , HH.span [ HP.class_ (HH.ClassName "legend-sep") ] []
+  , HH.span_ [ HH.text "● holds" ]
   , HH.span_ [ HH.text "× ruled out" ]
   , HH.span [ HP.class_ (HH.ClassName "legend-accent") ]
       [ HH.text "● in the envelope" ]
@@ -416,12 +548,15 @@ gridLegend st =
           ]
       , HH.text "wiring"
       ]
-  , HH.label [ HP.class_ (HH.ClassName "toggle") ]
-      [ HH.input
-          [ HP.type_ HP.InputCheckbox
-          , HP.checked st.dagView
-          , HE.onChecked ToggleDag
-          ]
-      , HH.text "DAG"
-      ]
   ]
+
+layoutButton :: forall m. State -> GridLayout -> String -> H.ComponentHTML Action () m
+layoutButton st l label =
+  HH.button
+    [ HP.classes
+        ( map HH.ClassName
+            (if st.gridLayout == l then [ "view-btn", "active" ] else [ "view-btn" ])
+        )
+    , HE.onClick \_ -> SetGridLayout l
+    ]
+    [ HH.text label ]

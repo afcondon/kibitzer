@@ -11,3 +11,4 @@ bundle.js
 .DS_Store
 smt/.venv/
 smt/corpus.jsonl
+smoke/*.png

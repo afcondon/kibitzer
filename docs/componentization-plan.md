@@ -79,7 +79,7 @@ Sequencing: define the component boundaries here first (§1), then
 propose the widget API upstream shaped like what kibitzer actually
 needed — requirements from a real client, not speculation.
 
-## 2½. The radial DAG (Andrew, 2026-07-14 — queued)
+## 2½. The radial DAG (Andrew, 2026-07-14) — DONE 2026-07-15
 
 The layered skyline as a series of orbits: depth becomes radius.
 Orientation choice made by the domain: **observations on the outermost
@@ -87,15 +87,28 @@ ring, derivations collapsing inward, the envelope certainties at the
 bullseye** — the argument literally closes in on the truth, and it
 rhymes with the packs view's envelope-at-centre geometry.
 
-Mechanically this is machinery we already have proven: one filtered
-radial force per depth ring (the packs' orbit trick, N rings instead
-of one), link forces along premise edges so conclusions settle at the
-angular position of their premises, collide for spacing —
-hylograph-simulation end to end. And the morph generalizes: marks now
-have three homes (notebook cell, skyline slot, orbit slot); the morph
-state becomes which position map is active rather than a single 0..1.
-Best sequenced after the componentization refactor (CascadeHost owns
-all three layouts cleanly).
+Landed as `Kibitzer.Frontend.Cascade.Radial` + a three-way layout
+(Table | Skyline | Orbits buttons on the grid toolbar). As planned:
+filtered radial force per ring, link forces along premise edges,
+collide, hylograph-simulation end to end; the morph generalized to
+`{from, to, t}` over three position maps (notebook cell, skyline slot,
+live orbit position), so any pair morphs and mid-flight reversals stay
+continuous. Lessons from the doing:
+
+- **Angle is feed order** (twelve o'clock, clockwise) — the skyline's
+  x-axis curling into a circle; mid-game the un-swept arc *is* the
+  future, which reads beautifully.
+- **Anchor springs are load-bearing**: radial forces don't constrain
+  angle, so the linked web contracts tangentially into a clot without
+  a whisper (0.05) of pull toward each fact's chronological slot.
+- **Envelope facts take no physics links** — their premises drag them
+  off the bullseye otherwise. The drawn provenance edges are computed
+  from mark positions, not sim links, so nothing visual is lost.
+- Found and fixed a pre-existing race: an animation frame scheduled
+  before a view teardown could redraw into cleared DOM
+  (`viewReady` gate in CascadeHost).
+- dag-smoke grew into a 20-check three-layout suite (morphs, ring
+  guides, orbit physics, bullseye distances on a solved game).
 
 ## 3. The worlds canvas (Methods tab centrepiece)
 

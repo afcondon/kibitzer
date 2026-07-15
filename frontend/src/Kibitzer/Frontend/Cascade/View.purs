@@ -17,6 +17,7 @@ import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Set as Set
+import Data.String as String
 import Effect (Effect)
 import Hylograph.Transition.Tick as Tick
 import Kibitzer.Cards (Card)
@@ -25,6 +26,7 @@ import Kibitzer.Describe (describeClaim, describeFact, describeSuggestion, event
 import Kibitzer.Event (EventId(..), eventIdToInt)
 import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, renderMarks)
 import Kibitzer.Frontend.Cascade.Layout as L
+import Kibitzer.Frontend.Cascade.Radial as Radial
 import Kibitzer.Frontend.Cascade.Scene (Bracket, EdgeLine, StripBar, Verdict(..), eventLabel, renderScene)
 import Kibitzer.Frontend.Types (Game, currentEvent, currentKnowledge)
 import Kibitzer.Knowledge (Disjunction(..), Fact, FactId(..), envelopeIn, facts, solutionIfKnown)
@@ -34,20 +36,23 @@ redraw
   :: { game :: Game
      , position :: Int
      , wiring :: Boolean
-     , morph :: Number -- 0 = notebook table, 1 = derivation DAG
+     , layout :: { from :: L.GridLayout, to :: L.GridLayout, t :: Number }
+     , radialPos :: Map Int { x :: Number, y :: Number } -- live orbit positions by fact id
      , anim :: CascadeAnim
      , onBar :: Int -> Effect Unit
      }
   -> Effect Unit
-redraw { game, position, wiring, morph, anim, onBar } = renderScene
+redraw { game, position, wiring, layout, radialPos, anim, onBar } = renderScene
   { count
   , marks
   , edges
   , brackets
-  , bracketFade: 1.0 - m
-  , chromeFade: 1.0 - m
+  , bracketFade: tableAmount
+  , chromeFade: tableAmount
   , dagLevels
-  , dagOpacity: m * 0.85
+  , dagOpacity: skylineAmount * 0.85
+  , rings: Radial.ringGuides maxDepth
+  , ringsOpacity: radialAmount * 0.85
   , rail: eventLabel position (currentEvent game position)
   , verdict: verdictFor game position
   , strip: stripFor game position
@@ -59,7 +64,18 @@ redraw { game, position, wiring, morph, anim, onBar } = renderScene
   visible = facts knowledge
   visibleCount = Array.length visible
 
-  m = Tick.easeInOutCubic (clamp 0.0 1.0 morph)
+  m = Tick.easeInOutCubic (clamp 0.0 1.0 layout.t)
+
+  -- how much of layout l is showing this frame, 0..1
+  amountOf :: L.GridLayout -> Number
+  amountOf l = Tick.lerp
+    (if layout.from == l then 1.0 else 0.0)
+    (if layout.to == l then 1.0 else 0.0)
+    m
+
+  tableAmount = amountOf L.TableView
+  skylineAmount = amountOf L.SkylineView
+  radialAmount = amountOf L.RadialView
 
   -- every fact of the finished game, indexable by dense FactId
   allFacts :: Array Fact
@@ -95,25 +111,42 @@ redraw { game, position, wiring, morph, anim, onBar } = renderScene
       , y: levelY (fromMaybe 0 (Map.lookup f.id dagDepth))
       }
 
-  -- a fact's home for this frame: between its notebook cell and its DAG slot
+  -- a fact's home in one layout: notebook cell, skyline slot, or its
+  -- live position in the orbit simulation (analytic radial fallback
+  -- until the sim has spoken)
+  homeOf :: L.GridLayout -> Fact -> { x :: Number, y :: Number }
+  homeOf l f = case l of
+    L.TableView -> L.claimCell count f.claim
+    L.SkylineView -> dagPosOf f
+    L.RadialView ->
+      let
+        FactId n = f.id
+      in
+        fromMaybe
+          (Radial.analyticPos dagDepth maxDepth (Array.length allFacts) f)
+          (Map.lookup n radialPos)
+
+  -- a fact's position this frame: between its two homes of the moment
   posOf :: Fact -> { x :: Number, y :: Number }
   posOf f =
     let
-      t = L.claimCell count f.claim
-      g = dagPosOf f
+      a = homeOf layout.from f
+      b = homeOf layout.to f
     in
-      { x: Tick.lerp t.x g.x m, y: Tick.lerp t.y g.y m }
+      { x: Tick.lerp a.x b.x m, y: Tick.lerp a.y b.y m }
 
-  marks =
-    Array.zipWith
-      ( \f rm ->
-          let p = posOf f in rm { mark = rm.mark { x = p.x, y = p.y } }
-      )
-      visible
-      baseMarks
-      <> Array.drop (Array.length visible) baseMarks
-    where
-    baseMarks = renderMarks count visible anim
+  -- every mark — the living and the dying alike — is repositioned into
+  -- the current layout, so backward scrubs fade facts out where they
+  -- stood, not at their table cell
+  marks = renderMarks count visible anim <#> \rm ->
+    case factOfKey rm.mark.key of
+      Just f -> let p = posOf f in rm { mark = rm.mark { x = p.x, y = p.y } }
+      Nothing -> rm
+
+  factOfKey :: String -> Maybe Fact
+  factOfKey key = do
+    n <- Int.fromString (String.drop 1 key)
+    Array.index allFacts n
 
   -- a hairline is bright while its conclusion flies in, then settles to
   -- faint persistent wiring (or nothing, with the toggle off)
@@ -132,7 +165,9 @@ redraw { game, position, wiring, morph, anim, onBar } = renderScene
       Just p -> Just (Tick.lerpClamped 0.0 0.75 (Tick.easeOutCubic (clamp 0.0 1.0 p)))
       Nothing ->
         let
-          settled = max (if wiring then 0.12 else 0.0) (0.3 * m)
+          -- away from the table the edges ARE the picture (skyline and
+          -- radial alike), so the morph raises them even with wiring off
+          settled = max (if wiring then 0.12 else 0.0) (0.3 * (1.0 - tableAmount))
         in
           if settled > 0.005 then Just settled else Nothing
     pure

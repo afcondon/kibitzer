@@ -34,6 +34,7 @@ import Kibitzer.Describe (describeSuggestion, eventRef, playerName)
 import Kibitzer.Event (Event(..), EventId(..))
 import Kibitzer.Frontend.Cascade.Anim (Glyph(..), RenderMark)
 import Kibitzer.Frontend.Cascade.Layout as L
+import Kibitzer.Frontend.Cascade.Radial as Radial
 import Kibitzer.Player (PlayerCount, PlayerId(..), playerCountToInt)
 
 -- | A provenance hairline, premise cell to conclusion cell.
@@ -61,7 +62,9 @@ type SceneInput =
   , bracketFade :: Number -- 1 = table view, 0 = fully morphed away
   , chromeFade :: Number -- ditto, for the notebook grid itself
   , dagLevels :: Array { y :: Number, label :: String }
-  , dagOpacity :: Number -- the DAG axis fades in as the grid fades out
+  , dagOpacity :: Number -- the skyline's level axis fades in as the grid fades out
+  , rings :: Array Radial.RingGuide
+  , ringsOpacity :: Number -- ditto for the radial view's orbit guides
   , rail :: String
   , verdict :: Verdict
   , strip :: Array StripBar
@@ -106,6 +109,7 @@ renderScene input = do
   _ <- rerender "#cascade-chrome"
     (elem Group [ F.opacity (show input.chromeFade) ] (gridChrome input.count))
   _ <- rerender "#cascade-dagaxis" (dagAxisTree input.dagOpacity input.dagLevels)
+  _ <- rerender "#cascade-rings" (ringsTree input.ringsOpacity input.rings)
   _ <- rerender "#cascade-edges" (edgesTree input.edges)
   _ <- rerender "#cascade-brackets" (bracketsTree input.bracketFade input.brackets)
   _ <- rerender "#cascade-marks" (marksTree input.marks)
@@ -123,6 +127,7 @@ chromeTree count =
     [ elem Group [ F.attr "id" "cascade-chrome" ]
         [ elem Group [ F.opacity "1" ] (gridChrome count) ]
     , elem Group [ F.attr "id" "cascade-dagaxis" ] []
+    , elem Group [ F.attr "id" "cascade-rings" ] []
     , elem Group [ F.attr "id" "cascade-edges" ] []
     , elem Group [ F.attr "id" "cascade-brackets" ] []
     , elem Group [ F.attr "id" "cascade-marks" ] []
@@ -318,6 +323,41 @@ dagAxisTree opacity levels =
       ]
   where
   svgWidthLocal = L.svgWidth
+
+-- | The radial view's chrome: one orbit guide per derivation ring plus
+-- | the dashed bullseye where envelope certainties land, fading in as
+-- | the notebook fades out.
+ringsTree :: Number -> Array Radial.RingGuide -> Tree
+ringsTree opacity rings =
+  forEach "rings" Group rings (\g -> "ring" <> show g.r) \g ->
+    let
+      circleAttrs =
+        [ F.cx Radial.centre.x
+        , F.cy Radial.centre.y
+        , F.r g.r
+        , F.fill "none"
+        , F.stroke (if g.bullseye then accent else hairline)
+        , F.strokeWidth 1.0
+        , F.opacity (show (opacity * if g.bullseye then 0.55 else 1.0))
+        ]
+      dash = if g.bullseye then [ staticStr "stroke-dasharray" "2 4" ] else []
+      -- the bullseye's caption sits in its (empty) centre; the dots
+      -- orbit the ring above it, so the top edge would hide the words
+      caption = elem Text
+        [ F.x Radial.centre.x
+        , F.y (if g.bullseye then Radial.centre.y + 3.0 else Radial.centre.y - g.r - 5.0)
+        , F.textAnchor "middle"
+        , F.fontSize "10"
+        , F.fill (if g.bullseye then accent else "#767676")
+        , F.opacity (show (opacity * 0.9))
+        , staticStr "textContent" g.label
+        ]
+        []
+    in
+      elem Group []
+        ( Array.cons (elem Circle (circleAttrs <> dash) [])
+            (if g.label == "" then [] else [ caption ])
+        )
 
 railTree :: String -> Verdict -> Tree
 railTree label verdict =

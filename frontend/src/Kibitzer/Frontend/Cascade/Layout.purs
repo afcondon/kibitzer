@@ -3,7 +3,8 @@
 -- | Pure arithmetic — the scene builders and the animation code both read
 -- | from here, so the grid and the flying marks can never disagree.
 module Kibitzer.Frontend.Cascade.Layout
-  ( svgWidth
+  ( GridLayout(..)
+  , svgWidth
   , svgHeight
   , gridTop
   , rowHeight
@@ -27,6 +28,14 @@ import Data.Maybe (fromMaybe)
 import Kibitzer.Cards (Card, allCards)
 import Kibitzer.Knowledge (Claim(..))
 import Kibitzer.Player (PlayerCount, PlayerId(..), playerCountToInt)
+
+-- | The grid pane's three arrangements of the same marks: the notebook
+-- | table, the derivation skyline (feed order × depth), and the radial
+-- | DAG (depth as orbits). Every mark has a home in each; the morph
+-- | animates between any pair.
+data GridLayout = TableView | SkylineView | RadialView
+
+derive instance Eq GridLayout
 
 svgWidth :: Number
 svgWidth = 760.0
