@@ -93,6 +93,24 @@ rough order of conviction:
    force layouts for small diagrams — Penrose proved diagram layout
    by constraint solving is viable; a Hylograph binding would be a
    showcase and a genuinely different layout engine.
+
+   *Sharpened 2026-07-15 (Andrew: "a GraphViz replacement that
+   doesn't involve porting C++ to WASM?").* Two-part answer. (a) The
+   no-port candidate for dot's bread-and-butter is a **pure PureScript
+   Sugiyama** (rank / order / position / route) in hylograph-layout —
+   dagre and d3-dag prove the pipeline is ~2–3k lines of portable
+   algorithm code, no C++ anywhere; clients in-house (Minard,
+   ShapedSteer DAG views, the skyline family). (b) What **SMT** adds
+   is not scale but *exactness and explainability at small scale*:
+   rank assignment and crossing minimization as MaxSMT (exact minimum
+   crossings; user constraints like "keep these aligned" composed
+   into the same solve, which dot cannot do), and — the kibitzer
+   move — an **unsat core when the layout constraints conflict**,
+   instead of GraphViz's silent weirdness. Orders of magnitude slower
+   than dot, so it's for small explanatory diagrams — exactly
+   Hylograph's register. Browser honesty: z3-wasm is itself a C++
+   port, but consuming Microsoft's maintained artifact ≠ porting one;
+   Node-side it's a clean child process.
 6. Long tail: puzzle showcases with unsat-core explainers (Sudoku
    "why is this cell forced" — the kibitzer argument view, reused);
    Bosun placement/port allocation (real but small); dependency
@@ -197,6 +215,15 @@ essay and becomes a function.
   JTMS — kibitzer, ShapedSteer, Harmonia.
   SMT — kibitzer, ShapedSteer, FH-2 auto-routing (plus possibly a
   second contrived puzzle example; Andrew is open to one).
+- **A Bayesian layer joins the plan** (Andrew, 2026-07-15, after
+  swimming): guess before either ⊢ or ⊨ delivers certainty — EV
+  rather than proof, "the Jane St solution". The correspondence table
+  gains its third column (⊢ / ⊨ / P: proof, model, measure); the
+  worlds canvas is already the uniform posterior and the log chart is
+  already the entropy curve in bits. Staged plan in
+  `docs/bayesian-layer.md` — Stage A (exact posterior from p0,
+  nearly free) first; it measures the θ-crossing-vs-proof gap that
+  decides whether the later stages earn their keep.
 - Next build steps, revised: (a) FH-2 auto-routing spike against z3
   (second SMT client in its habitat; prices Optimize/MaxSMT); (b) a
   Harmonia scale-inference spike using kibitzer's saturation pattern
