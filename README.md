@@ -36,8 +36,13 @@ make test         # golden + property tests for the core
 make example      # CLI demo: full transcript + watcher's notebook (SEED=42)
 make bundle serve # web app on http://localhost:3026
 
+make skylines     # derivation DAGs as small multiples  → /skylines.html
+make orbits       # the same DAGs bent into circles     → /orbits.html
+make worlds       # the Z3 model space, animated        → /worlds.html, /worlds-gap.html
+
 spago run -p kibitzer-example -- 42 --moves --players 6   # any variant, as text
 spago run -p kibitzer-example -- stats 100                # the comparison table
+spago run -p kibitzer-example -- trace 33 --players 6     # one game as JSON (for smt/)
 ```
 
 Web-app URLs carry the whole configuration — `?seed=42&players=6&moves=1`
@@ -47,6 +52,58 @@ The dev URL `http://localhost:3026` is Bosun-routed (registered as
 `kilo-papa-zulu-delta:frontend` in Bosun's fleet registry; Marginalia
 project #251) — `bosun serve` lazy-spawns the static server on first
 request, so `make serve` is only needed when the router isn't running.
+
+## The observatory
+
+The app has grown from a split screen into a small observatory — the
+same event log watched several ways, all driven by one transport bar
+(the seed lives in the top nav; every view is a view of one seeded
+game).
+
+**Game tab** — four columns: the ground truth table (players, hands,
+envelope), the event stream as a scrolling terminal, the watcher's
+✓/× notebook, and *How the watcher knows* — every fact with its rule
+and provenance, fresh facts highlighted.
+
+**Cascade tab** — the cross-referenced view, three columns stitched
+together by hover:
+
+- *Possibility packs* (left): one bubble per (location, card)
+  possibility, held by a force simulation. Eliminations fade,
+  located cards take a ring, and when a card is proven into the
+  envelope every player's copy visibly flies into the centre.
+  "Showed one of these" candidates lift onto a wide orbit and explain
+  themselves on hover.
+- *The terminal* (centre): the same stream as the Game tab.
+- *The orbits* (right): the watcher's derivation DAG with three
+  morphing layouts — the notebook **table**, the **skyline** (feed
+  order × derivation depth), and the **orbits** (depth as radius,
+  observations outermost, envelope certainties pulled to the
+  bullseye; every mark an "E23" token naming its source event).
+
+Hover anything — a bubble, a token, a terminal line — and its whole
+story lights up across all three columns: the premise ancestry in the
+DAG, the possibilities it touches in the packs, the events it came
+from in the stream.
+
+**Static pages** (all regenerable from the Makefile):
+
+- `skylines.html` / `orbits.html` — curated small multiples of
+  complete derivation DAGs across seeds: shallow sweeps, depth-15
+  cathedrals, maximum breaks, games the watcher never cracks.
+- `worlds.html` — the SMT view. Z3 enumerates every world consistent
+  with the transcript at the first moment the space fits on a page,
+  then each event visibly kills the worlds it contradicts, from
+  4.4 × 10¹³ legal deals (dashed estimate, "Too big to show") down to
+  the solved view — with the collapse curve on log paper as scrubber.
+- `worlds-gap.html` — the completeness gap: certainty dots fill when
+  the model space agrees on a card, and gain an ink ring when the
+  engine's notebook catches up. One game ends five dots, four rings.
+
+The `smt/` sidecar (Python + Z3) holds the optimal-watcher oracle the
+property tests compare against, and the worlds-page builder. The
+`smoke/` directory holds four puppeteer suites that exercise all of
+the above against the dev server.
 
 ## The two load-bearing ideas
 
@@ -219,8 +276,11 @@ forces repetitive ones.
 
 ```
 core/      kibitzer-core      pure engine + inference (no Effect outside tests)
-example/   kibitzer-example   CLI transcript demo + stats mode
-frontend/  kibitzer-frontend  Halogen split-screen app (spago bundle → public/)
+example/   kibitzer-example   CLI demo + stats/corpus/trace modes + skylines/orbits emitters
+frontend/  kibitzer-frontend  Halogen app (components + Hylograph HATS/simulation views)
+smt/       (Python + Z3)      optimal-watcher oracle, worlds-page builder
+smoke/     (puppeteer)        four browser suites against the dev server
+docs/      plans and write-ups (cascade viewer, componentization, TMS library seam)
 ```
 
 Within the core, `Kibitzer.Board` holds the movement geometry,

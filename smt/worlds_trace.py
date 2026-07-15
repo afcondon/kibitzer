@@ -185,13 +185,9 @@ def main():
         "cardKnownAt": trace.get("cardKnownAt", [None] * 21),
         "cardNames": CARD_SHORT,
         "estLog": [round(v, 3) for v in est_log],  # log10 counts, positions 0..p0
+        "total0": total0,
     }
     print(render_page(data))
-
-
-def sci(x):
-    e = int(math.floor(math.log10(x)))
-    return f"{x / 10**e:.1f} × 10^{e}"
 
 
 def render_page(data):
@@ -205,7 +201,7 @@ def render_page(data):
         .replace("__CAP__", str(data["cap"]))
         .replace("__P0E__", "E" + str(data["p0"] - 1))
         .replace("__NWORLDS__", f"{len(data['worlds']):,}")
-        .replace("__TOTAL0__", sci(10 ** data["estLog"][0]))
+        .replace("__TOTAL0__", f"{data['total0']:,}")
     )
 
 
@@ -232,7 +228,8 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
  #toobig { position: absolute; inset: 0; display: none; flex-direction: column;
            align-items: center; justify-content: flex-start; gap: .5rem;
            padding-top: 7rem; text-align: center; }
- #toobig .big { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+ #toobig .big { font-size: 2.3rem; font-weight: 700; letter-spacing: -0.01em;
+                font-variant-numeric: tabular-nums; }
  #toobig .sub { font-size: .85rem; color: var(--muted); max-width: 34rem; }
  .rail { display: flex; gap: 1.25rem; align-items: baseline;
          font-size: .85rem; min-height: 1.4rem; }
@@ -257,7 +254,7 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
 <p class="intro">Seed __SEED__, __PLAYERS__ players. Every row is one complete world —
 an assignment of all 21 cards to hands and envelope — consistent with the public
 transcript; every column is a card, coloured by where that world puts it. Before
-__P0E__ the space is too big to show (__TOTAL0__ legal deals at the start — the
+__P0E__ the space is too big to show (__TOTAL0__ legal deals at the start, exactly — the
 dashed stretch of the curve is an estimate anchored at exact endpoints); from
 __P0E__ on, <em>every</em> consistent world is on the page — all __NWORLDS__ of
 them, the totality, not a sample. Each further event kills the worlds it
@@ -285,7 +282,7 @@ red columns agree, the space itself has solved the murder.</p>
   <div class="cvwrap">
     <canvas id="cv"></canvas>
     <div id="toobig">
-      <div class="big">Too big to show</div>
+      <div class="big" id="toobig-num"></div>
       <div class="sub" id="toobig-sub"></div>
     </div>
   </div>
@@ -340,13 +337,17 @@ for (let p = D.p0; p <= D.total; p++) {
 }
 // log10 of the (estimated or exact) count at any position
 const logAt = p => p < D.p0 ? D.estLog[p] : Math.log10(Math.max(counts[p - D.p0], 1));
-const sci = lg => {
+// full digits, not scientific notation: 44,000,000,000,000 lands in a
+// way 4.4 × 10^13 slips past — the jumps must be felt
+const fullNum = lg => {
   const e = Math.floor(lg);
-  return `${Math.pow(10, lg - e).toFixed(1)} × 10${String(e).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d])}`;
+  const mant = Math.round(Math.pow(10, lg - e) * 10) / 10; // 2 sig figs
+  return Math.round(mant * Math.pow(10, Math.min(e, 15))).toLocaleString()
+    + (e > 15 ? "0".repeat(e - 15) : "");
 };
 const chart = document.getElementById("chart");
 const NS = "http://www.w3.org/2000/svg";
-const CW = 860, CHH = 130, PADL = 40, PADR = 10, PADT = 16, PADB = 6;
+const CW = 860, CHH = 130, PADL = 52, PADR = 10, PADT = 16, PADB = 6;
 chart.setAttribute("viewBox", `0 0 ${CW} ${CHH}`);
 chart.setAttribute("preserveAspectRatio", "none");
 const xOf = p => PADL + (CW - PADL - PADR) * p / D.total;
@@ -361,12 +362,14 @@ function svgEl(tag, attrs, text) {
 }
 // gridlines every three decades — the log paper
 const SUP = e => String(e).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+const DECADE_WORDS = ["1", "1,000", "1 million", "1 billion", "1 trillion"];
 for (let k = 0; k <= maxLog; k += 3) {
   const y = yOfLog(k);
   svgEl("line", { x1: PADL, y1: y, x2: CW - PADR, y2: y,
                   stroke: "#e6e6e6", "stroke-width": 1 });
   svgEl("text", { x: PADL - 5, y: y + 3, "text-anchor": "end",
-                  "font-size": 9, fill: "#767676" }, k === 0 ? "1" : "10" + SUP(k));
+                  "font-size": 9, fill: "#767676" },
+        DECADE_WORDS[k / 3] ?? "10" + SUP(k));
 }
 // dashed: the estimated stretch (anchored at exact endpoints)
 let dEst = `M ${xOf(0)} ${yOfLog(D.estLog[0])}`;
@@ -436,9 +439,14 @@ function retarget() {
     // beyond enumeration: the grid dissolves, the notice takes the stage
     for (const r of rows) r.ta = 0;
     toobig.style.display = "flex";
+    document.getElementById("toobig-num").textContent =
+      (position === 0 ? "" : "≈ ") +
+      (position === 0 ? D.total0.toLocaleString() : fullNum(logAt(position)));
     document.getElementById("toobig-sub").textContent =
-      `≈ ${sci(logAt(position))} consistent worlds — enumeration becomes possible at E${D.p0-1}` +
-      (position === 0 ? " (exact: every legal deal)" : " (estimated)");
+      (position === 0
+        ? "possibilities — exactly: every legal deal. "
+        : "possibilities (estimated) — far too many to show. ")
+      + `Enumeration becomes possible at E${D.p0-1}.`;
     updateChrome([]);
     kick();
     return;
@@ -479,7 +487,9 @@ function updateChrome(alive) {
   document.getElementById("gapline").textContent =
     gap > 0 ? `${gap} card${gap > 1 ? "s" : ""} the space knows and the notebook doesn't` : "";
   document.getElementById("count").textContent = position < D.p0
-    ? `≈ ${sci(logAt(position))} worlds remain`
+    ? (position === 0
+        ? `${D.total0.toLocaleString()} worlds remain`
+        : `≈ ${fullNum(logAt(position))} worlds remain`)
     : `${alive.length.toLocaleString()} worlds remain`;
   document.getElementById("evline").textContent =
     position === 0 ? "Before the deal — every legal assignment is possible."
@@ -487,7 +497,7 @@ function updateChrome(alive) {
   const v = document.getElementById("verdict");
   v.textContent = (D.optimalSolvedAt != null && position >= D.optimalSolvedAt)
     ? "the space has pinned the envelope" : "";
-  document.getElementById("pos").textContent = `E${position-1} / E${D.total-1}`;
+  document.getElementById("pos").textContent = (position === 0 ? "deal" : `E${position-1}`) + ` / E${D.total-1}`;
   document.getElementById("scrub").value = position;
   updateChart();
 }
