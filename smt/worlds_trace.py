@@ -22,6 +22,7 @@ Usage:
 
 import argparse
 import json
+import math
 import sys
 
 from z3 import And, If, Int, Or, Solver, Sum, sat
@@ -142,6 +143,32 @@ def main():
     print(f"final worlds: {len(alive)}; optimal solve at {optimal_solved_at}; "
           f"engine solve at {trace['engineSolvedAt']}", file=sys.stderr)
 
+    # the pre-enumeration stretch of the collapse curve: the position-0
+    # count is exact in closed form (envelope triples x hand multinomial),
+    # the flat stretches are exact (uninformative events kill nothing),
+    # and the drop magnitudes are an independence estimate — anchored so
+    # the curve lands exactly on the enumerated count at p0
+    hands = trace["handSizes"]
+    free = sum(hands)  # cards in hands (21 - 3)
+    total0 = 6 * 6 * 9 * math.factorial(free) // math.prod(math.factorial(h) for h in hands)
+    log_factors = []
+    for e in trace["events"][:p0]:
+        k = e["constraint"]
+        if k is None:
+            log_factors.append(0.0)
+            continue
+        ps = 1.0
+        for c in k["cards"]:
+            p_env = 1 / 6 if c < 12 else 1 / 9
+            ps *= 1 - (1 - p_env) * hands[k["player"]] / free
+        log_factors.append(math.log(ps if k["type"] == "pass" else 1 - ps))
+    informative_n = sum(1 for f in log_factors if f != 0.0)
+    target = math.log(len(worlds) / total0)
+    corr = (target - sum(log_factors)) / max(1, informative_n)
+    est_log = [math.log10(total0)]
+    for f in log_factors:
+        est_log.append(est_log[-1] + (0.0 if f == 0.0 else (f + corr) / math.log(10)))
+
     data = {
         "seed": trace["seed"],
         "players": trace["players"],
@@ -157,8 +184,14 @@ def main():
         "optimalSolvedAt": optimal_solved_at,
         "cardKnownAt": trace.get("cardKnownAt", [None] * 21),
         "cardNames": CARD_SHORT,
+        "estLog": [round(v, 3) for v in est_log],  # log10 counts, positions 0..p0
     }
     print(render_page(data))
+
+
+def sci(x):
+    e = int(math.floor(math.log10(x)))
+    return f"{x / 10**e:.1f} × 10^{e}"
 
 
 def render_page(data):
@@ -172,6 +205,7 @@ def render_page(data):
         .replace("__CAP__", str(data["cap"]))
         .replace("__P0E__", "E" + str(data["p0"] - 1))
         .replace("__NWORLDS__", f"{len(data['worlds']):,}")
+        .replace("__TOTAL0__", sci(10 ** data["estLog"][0]))
     )
 
 
@@ -193,7 +227,13 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
  .certs i { border-radius: 50%; width: 8px; height: 8px; justify-self: center;
             opacity: 0; transition: opacity .4s, box-shadow .4s; }
  .certs i.known { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink); }
+ .cvwrap { position: relative; }
  canvas { width: 100%; display: block; border: 1px solid var(--hairline); }
+ #toobig { position: absolute; inset: 0; display: none; flex-direction: column;
+           align-items: center; justify-content: flex-start; gap: .5rem;
+           padding-top: 7rem; text-align: center; }
+ #toobig .big { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+ #toobig .sub { font-size: .85rem; color: var(--muted); max-width: 34rem; }
  .rail { display: flex; gap: 1.25rem; align-items: baseline;
          font-size: .85rem; min-height: 1.4rem; }
  .rail .count { font-variant-numeric: tabular-nums; color: var(--muted); }
@@ -217,8 +257,9 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
 <p class="intro">Seed __SEED__, __PLAYERS__ players. Every row is one complete world —
 an assignment of all 21 cards to hands and envelope — consistent with the public
 transcript; every column is a card, coloured by where that world puts it. Before
-__P0E__ the space is astronomically large, so the page begins at the first event
-after which <em>every</em> consistent world fits on one page — all __NWORLDS__ of
+__P0E__ the space is too big to show (__TOTAL0__ legal deals at the start — the
+dashed stretch of the curve is an estimate anchored at exact endpoints); from
+__P0E__ on, <em>every</em> consistent world is on the page — all __NWORLDS__ of
 them, the totality, not a sample. Each further event kills the worlds it
 contradicts. When a column goes monochrome, that card's place is certain — it gets
 a dot, and an ink ring once the watcher's notebook knows it too. When the three
@@ -241,7 +282,13 @@ red columns agree, the space itself has solved the murder.</p>
   </div>
   <div class="collabels" id="collabels"></div>
   <div class="certs" id="certs"></div>
-  <canvas id="cv"></canvas>
+  <div class="cvwrap">
+    <canvas id="cv"></canvas>
+    <div id="toobig">
+      <div class="big">Too big to show</div>
+      <div class="sub" id="toobig-sub"></div>
+    </div>
+  </div>
   <div class="legend" id="legend"></div>
 </div>
 <script>
@@ -291,29 +338,43 @@ for (let p = D.p0; p <= D.total; p++) {
   for (let i = 0; i < W; i++) if (dieAt[i] > p) n++;
   counts.push(n);
 }
+// log10 of the (estimated or exact) count at any position
+const logAt = p => p < D.p0 ? D.estLog[p] : Math.log10(Math.max(counts[p - D.p0], 1));
+const sci = lg => {
+  const e = Math.floor(lg);
+  return `${Math.pow(10, lg - e).toFixed(1)} × 10${String(e).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d])}`;
+};
 const chart = document.getElementById("chart");
 const NS = "http://www.w3.org/2000/svg";
-const CW = 860, CHH = 96, PADL = 34, PADR = 10, PADT = 16, PADB = 6;
+const CW = 860, CHH = 130, PADL = 40, PADR = 10, PADT = 16, PADB = 6;
 chart.setAttribute("viewBox", `0 0 ${CW} ${CHH}`);
 chart.setAttribute("preserveAspectRatio", "none");
-const xOf = p => PADL + (CW - PADL - PADR) * (p - D.p0) / (D.total - D.p0);
-const maxLog = Math.log10(counts[0]);
-const yOf = n => PADT + (CHH - PADT - PADB) * (1 - Math.log10(Math.max(n, 1)) / maxLog);
+const xOf = p => PADL + (CW - PADL - PADR) * p / D.total;
+const maxLog = D.estLog[0];
+const yOfLog = lg => PADT + (CHH - PADT - PADB) * (1 - lg / maxLog);
+const yOf = n => yOfLog(Math.log10(Math.max(n, 1)));
 function svgEl(tag, attrs, text) {
   const e = document.createElementNS(NS, tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   if (text != null) e.textContent = text;
   chart.appendChild(e); return e;
 }
-// decade gridlines — the log paper
-for (let k = 0; Math.pow(10, k) <= counts[0]; k++) {
-  const y = yOf(Math.pow(10, k));
+// gridlines every three decades — the log paper
+const SUP = e => String(e).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+for (let k = 0; k <= maxLog; k += 3) {
+  const y = yOfLog(k);
   svgEl("line", { x1: PADL, y1: y, x2: CW - PADR, y2: y,
                   stroke: "#e6e6e6", "stroke-width": 1 });
   svgEl("text", { x: PADL - 5, y: y + 3, "text-anchor": "end",
-                  "font-size": 9, fill: "#767676" }, Math.pow(10, k).toLocaleString());
+                  "font-size": 9, fill: "#767676" }, k === 0 ? "1" : "10" + SUP(k));
 }
-// the curve, step-after
+// dashed: the estimated stretch (anchored at exact endpoints)
+let dEst = `M ${xOf(0)} ${yOfLog(D.estLog[0])}`;
+for (let p = 1; p <= D.p0; p++)
+  dEst += ` H ${xOf(p)} V ${yOfLog(D.estLog[p])}`;
+svgEl("path", { d: dEst, fill: "none", stroke: "#767676", "stroke-width": 1.1,
+                "stroke-dasharray": "4 3" });
+// solid: the enumerated truth
 let d = `M ${xOf(D.p0)} ${yOf(counts[0])}`;
 for (let p = D.p0 + 1; p <= D.total; p++)
   d += ` H ${xOf(p)} V ${yOf(counts[p - D.p0])}`;
@@ -340,15 +401,15 @@ const curLine = svgEl("line", { y1: PADT - 4, y2: CHH - PADB,
                                 stroke: ENV_COLOUR, "stroke-width": 1.2 });
 const curDot = svgEl("circle", { r: 3, fill: ENV_COLOUR });
 function updateChart() {
-  const x = xOf(position), y = yOf(counts[position - D.p0]);
+  const x = xOf(position), y = yOfLog(logAt(position));
   curLine.setAttribute("x1", x); curLine.setAttribute("x2", x);
   curDot.setAttribute("cx", x); curDot.setAttribute("cy", y);
 }
-// click (or drag) to scrub
+// click (or drag) to scrub — anywhere, including the too-big stretch
 function chartSeek(e) {
   const r = chart.getBoundingClientRect();
   const frac = ((e.clientX - r.left) / r.width * CW - PADL) / (CW - PADL - PADR);
-  stop(); goTo(Math.round(D.p0 + frac * (D.total - D.p0)));
+  stop(); goTo(Math.round(frac * D.total));
 }
 chart.addEventListener("click", chartSeek);
 chart.addEventListener("mousemove", e => { if (e.buttons & 1) chartSeek(e); });
@@ -369,7 +430,20 @@ function sizeCanvas() {
 const rows = D.worlds.map(() => ({ y: 0, h: 0, a: 1, ty: 0, th: 0, ta: 1 }));
 let position = 0;
 
+const toobig = document.getElementById("toobig");
 function retarget() {
+  if (position < D.p0) {
+    // beyond enumeration: the grid dissolves, the notice takes the stage
+    for (const r of rows) r.ta = 0;
+    toobig.style.display = "flex";
+    document.getElementById("toobig-sub").textContent =
+      `≈ ${sci(logAt(position))} consistent worlds — enumeration becomes possible at E${D.p0-1}` +
+      (position === 0 ? " (exact: every legal deal)" : " (estimated)");
+    updateChrome([]);
+    kick();
+    return;
+  }
+  toobig.style.display = "none";
   const alive = aliveAt(position);
   const h = Math.min(24, CSS_H / Math.max(alive.length, 26));
   const gap = h > 6 ? 1 : 0;
@@ -404,10 +478,12 @@ function updateChrome(alive) {
   }
   document.getElementById("gapline").textContent =
     gap > 0 ? `${gap} card${gap > 1 ? "s" : ""} the space knows and the notebook doesn't` : "";
-  document.getElementById("count").textContent =
-    `${alive.length.toLocaleString()} worlds remain`;
+  document.getElementById("count").textContent = position < D.p0
+    ? `≈ ${sci(logAt(position))} worlds remain`
+    : `${alive.length.toLocaleString()} worlds remain`;
   document.getElementById("evline").textContent =
-    `E${position-1} · ${D.labels[position-1]}`;
+    position === 0 ? "Before the deal — every legal assignment is possible."
+                   : `E${position-1} · ${D.labels[position-1]}`;
   const v = document.getElementById("verdict");
   v.textContent = (D.optimalSolvedAt != null && position >= D.optimalSolvedAt)
     ? "the space has pinned the envelope" : "";
@@ -454,10 +530,10 @@ function draw(snap) {
 
 // ---- transport
 const scrub = document.getElementById("scrub");
-scrub.min = D.p0;
+scrub.min = 0;
 scrub.max = D.total;
-function goTo(p) { position = Math.max(D.p0, Math.min(D.total, p)); retarget(); }
-document.getElementById("b0").onclick = () => { stop(); goTo(D.p0); };
+function goTo(p) { position = Math.max(0, Math.min(D.total, p)); retarget(); }
+document.getElementById("b0").onclick = () => { stop(); goTo(0); };
 document.getElementById("bb").onclick = () => { stop(); goTo(position - 1); };
 document.getElementById("bf").onclick = () => { stop(); goTo(position + 1); };
 document.getElementById("be").onclick = () => { stop(); goTo(D.total); };
@@ -468,7 +544,7 @@ const bp = document.getElementById("bp");
 function stop() { if (player) { clearInterval(player); player = null; bp.textContent = "▶"; } }
 bp.onclick = () => {
   if (player) { stop(); return; }
-  if (position >= D.total) goTo(D.p0);
+  if (position >= D.total) goTo(0);
   bp.textContent = "⏸";
   player = setInterval(() => {
     // skip straight to the next informative event so the collapse keeps pace
