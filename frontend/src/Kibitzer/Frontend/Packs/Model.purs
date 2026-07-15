@@ -48,7 +48,8 @@ import Data.Tuple.Nested ((/\))
 import Hylograph.ForceEngine.Setup (Setup, collide, dynamic, positionX, positionY, radial, setup, static, withFilter, withRadius, withStrength, withX, withY)
 import Hylograph.ForceEngine.Simulation (SimulationNode)
 import Kibitzer.Cards (Card, allCards)
-import Kibitzer.Describe (cardPhrase, describeFact, playerName)
+import Data.String as String
+import Kibitzer.Describe (cardPhrase, describeFact, eventRef, playerName)
 import Kibitzer.Knowledge (Claim(..), Disjunction(..), Knowledge(..), envelopeIn, envelopeOut, facts, holdsOf, lacksOf)
 import Kibitzer.Player (PlayerCount, PlayerId(..), allPlayers, playerCountToInt)
 
@@ -79,8 +80,10 @@ ringRadius = 205.0
 bubbleRadius :: Number
 bubbleRadius = 8.0
 
+-- | Wide enough that "showed one of these" candidates visibly leave the
+-- | pack — the orbit is an accusation-in-waiting and should read as one.
 orbitRadius :: Number
-orbitRadius = 54.0
+orbitRadius = 68.0
 
 cardCount :: Int
 cardCount = Array.length allCards
@@ -174,8 +177,13 @@ deriveStates count knowledge =
     let state = possState count knowledge loc c
     pure (nodeId loc card /\ { state, tip: tipFor loc c state })
   where
+  Knowledge k = knowledge
+
   tipFor loc c = case _ of
-    Open -> cardPhrase c <> " — nothing known for " <> seatName loc
+    -- an orbiting candidate explains why it left the pack
+    Open -> case orbitStory loc c of
+      Just story -> story
+      Nothing -> cardPhrase c <> " — nothing known for " <> seatName loc
     Ghost -> factTip (ruledOutClaim loc c)
     Confirmed -> factTip (confirmedClaim loc c)
     Gone -> ""
@@ -183,6 +191,27 @@ deriveStates count knowledge =
     seatName l
       | l == envelopeLoc count = "the envelope"
       | otherwise = playerName (PlayerId l)
+
+  -- "F showed one of these at E23 — the Knife is a candidate."
+  orbitStory loc c
+    | loc == envelopeLoc count = Nothing
+    | otherwise =
+        case
+          Array.filter
+            ( \(Disjunction d) ->
+                not d.resolved && d.player == PlayerId loc && Set.member c d.candidates
+            )
+            k.disjunctions
+          of
+          [] -> Nothing
+          ds -> Just
+            ( playerName (PlayerId loc)
+                <> " showed one of these at "
+                <> String.joinWith ", " (map (\(Disjunction d) -> eventRef d.source) ds)
+                <> " — "
+                <> cardPhrase c
+                <> " is a candidate."
+            )
 
   ruledOutClaim loc c
     | loc == envelopeLoc count = NotInEnvelope c

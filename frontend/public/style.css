@@ -728,3 +728,8 @@ h2 {
   .split4 { grid-template-columns: 1fr; }
   .split4 .watcher-pane { border-right: none; border-bottom: 1px solid var(--ink); }
 }
+
+/* the feed owns its whole column on the four-column game tab */
+.split4 .feed-col { overflow: hidden; display: flex; flex-direction: column; }
+.split4 .feed-col .feed-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.split4 .feed-col .feed { max-height: none; flex: 1; min-height: 0; overflow-y: auto; }

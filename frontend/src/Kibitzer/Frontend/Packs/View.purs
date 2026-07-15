@@ -56,10 +56,13 @@ emptyPacksAnim = { entering: Map.empty, exiting: [] }
 packsAnimActive :: PacksAnim -> Boolean
 packsAnimActive anim = not (Map.isEmpty anim.entering) || not (Array.null anim.exiting)
 
+-- | Exits run at half the enter rate: the convergence — every copy of a
+-- | located card flying into the one that absorbed them — is the payoff
+-- | shot, and it needs time to read.
 tickPacksAnim :: Number -> PacksAnim -> PacksAnim
 tickPacksAnim delta anim =
   { entering: (Tick.tickProgressMap delta anim.entering).active
-  , exiting: (Tick.tickTransitions (delta * 0.8) anim.exiting).active
+  , exiting: (Tick.tickTransitions (delta * 0.5) anim.exiting).active
   }
 
 ink :: String
@@ -159,9 +162,9 @@ orbitGuides count orbits =
         , F.r orbitRadius
         , F.fill "none"
         , F.stroke accent
-        , F.strokeWidth 1.0
+        , F.strokeWidth 1.2
         , staticStr "stroke-dasharray" "3 5"
-        , F.opacity "0.4"
+        , F.opacity "0.55"
         ]
         []
   where

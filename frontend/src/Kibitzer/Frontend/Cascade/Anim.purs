@@ -78,8 +78,9 @@ animActive :: CascadeAnim -> Boolean
 animActive anim = not (Map.isEmpty anim.entering) || not (Array.null anim.exiting)
 
 -- | Progress advanced per frame; completed entries simply drop out.
+-- | Unhurried on purpose — the choreography is the explanation.
 enterDelta :: Number
-enterDelta = Tick.ticksForDuration 450
+enterDelta = Tick.ticksForDuration 650
 
 tickAnim :: Number -> CascadeAnim -> CascadeAnim
 tickAnim delta anim =
