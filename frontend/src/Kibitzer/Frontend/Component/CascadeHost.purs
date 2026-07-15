@@ -7,10 +7,12 @@
 -- |
 -- | `receive` is the seam: a position change reconciles the animation
 -- | state against the fact diff (the scrub choreography); a genuinely
--- | different game — or a packs/grid switch, which is a controlled input
--- | so it survives remounts — tears the view down and rebuilds. The grid
--- | sub-toggles (wiring, DAG morph) are local state — no one outside
--- | this column cares.
+-- | different game tears the view down and rebuilds; a hover change is
+-- | a light repaint. One instance runs one mode for its lifetime —
+-- | `packView` picks packs or grid at mount, and the cross-referenced
+-- | page mounts one of each, so each mode owns a distinct container id.
+-- | The grid sub-toggles (layout, wiring) are local state — no one
+-- | outside this column cares.
 module Kibitzer.Frontend.Component.CascadeHost
   ( Input
   , Output(..)
@@ -43,25 +45,28 @@ import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, animActive, emptyAnim, enter
 import Kibitzer.Frontend.Cascade.Layout (GridLayout(..))
 import Kibitzer.Frontend.Cascade.Radial (RadialRow)
 import Kibitzer.Frontend.Cascade.Radial as Radial
-import Kibitzer.Frontend.Cascade.Scene (clearView, eventLabel, renderChrome)
-import Kibitzer.Frontend.Cascade.View (redraw, stripFor, verdictFor)
+import Kibitzer.Frontend.Cascade.Scene (clearView, renderChrome)
+import Kibitzer.Frontend.Cascade.View (redraw)
+import Kibitzer.Frontend.Crossref as Crossref
 import Kibitzer.Frontend.Packs.Model (PackRow, PossInfo)
 import Kibitzer.Frontend.Packs.Model as Packs
 import Kibitzer.Frontend.Packs.View (PacksAnim)
 import Kibitzer.Frontend.Packs.View as PacksView
-import Kibitzer.Frontend.Types (Game, currentEvent, currentKnowledge)
+import Kibitzer.Frontend.Types (Game, currentKnowledge)
 import Kibitzer.Knowledge (Fact, FactId(..), facts)
 import Kibitzer.Player (playerCountToInt)
 import Data.Foldable (maximum)
 
--- | `packView` arrives from the parent (controlled) so the Packs|Grid
--- | choice survives tab switches, which destroy and remount this
--- | component.
-type Input = { game :: Game, position :: Int, packView :: Boolean }
+type Input =
+  { game :: Game
+  , position :: Int
+  , packView :: Boolean -- packs (true) or the grid; fixed per instance
+  , hover :: Maybe Crossref.Hover -- the page-wide cross-reference hover
+  }
 
 data Output
   = ScrubRequested Int -- a sparkline bar click: the parent owns the timeline, we ask
-  | ViewChanged Boolean -- the Packs|Grid buttons: the parent owns the choice, we ask
+  | HoverChanged (Maybe Crossref.Hover) -- something under this host's pointer
 
 type Slot = H.Slot (Const Void) Output Unit
 
@@ -82,6 +87,7 @@ type State =
   , packsAnim :: PacksAnim
   , radialHandle :: Maybe (SimulationHandle RadialRow) -- alive while the radial layout is in play
   , radialPos :: Map Int { x :: Number, y :: Number } -- last-read orbit positions by fact id
+  , hover :: Maybe Crossref.Hover -- mirror of the input
   }
 
 data Action
@@ -91,7 +97,8 @@ data Action
   | AnimTick
   | ToggleWiring Boolean
   | SetGridLayout GridLayout
-  | SetPackView Boolean
+  | TokenHovered (Maybe Int)
+  | BubbleHovered (Maybe { loc :: Int, card :: Int })
   | BarClicked Int
 
 component :: forall q m. MonadAff m => H.Component q Input Output m
@@ -104,8 +111,8 @@ component = H.mkComponent
       , viewReady: false
       , animListener: Nothing
       , wiring: true
-      , gridLayout: TableView
-      , layoutFrom: TableView
+      , gridLayout: RadialView
+      , layoutFrom: RadialView
       , layoutT: 1.0
       , packView: input.packView
       , simHandle: Nothing
@@ -113,6 +120,7 @@ component = H.mkComponent
       , packsAnim: PacksView.emptyPacksAnim
       , radialHandle: Nothing
       , radialPos: Map.empty
+      , hover: input.hover
       }
   , render
   , eval: H.mkEval H.defaultEval
@@ -143,18 +151,20 @@ handleAction = case _ of
       { game = input.game
       , position = input.position
       , packView = input.packView
+      , hover = input.hover
       }
     if gameKey input.game /= gameKey st.game || input.packView /= st.packView then do
       -- a genuinely different deal, or a packs/grid switch: tear down
       -- and rebuild from scratch
       stopPacksSim
       initView
-    else when (input.position /= st.position) do
+    else if input.position /= st.position then do
       if st.packView then syncPacksMove
       else syncCascadeMove st.position input.position
-  SetPackView b -> do
-    st <- H.get
-    when (b /= st.packView) (H.raise (ViewChanged b))
+    else when (input.hover /= st.hover) do
+      -- a hover change alone: repaint the moving layer in place
+      if st.packView then drawPacksFrame
+      else redrawCascade
   -- one animation frame: advance progress, redraw, and keep the loop
   -- alive only while something is still moving. A frame scheduled before
   -- a view teardown can land while the chrome is gone — the viewReady
@@ -202,6 +212,8 @@ handleAction = case _ of
         }
       when (l == RadialView) ensureRadialSim
       scheduleAnimFrame
+  TokenHovered t -> H.raise (HoverChanged (map Crossref.HoverFact t))
+  BubbleHovered b -> H.raise (HoverChanged (map (\k -> Crossref.HoverPoss k.loc k.card) b))
   BarClicked i -> H.raise (ScrubRequested i)
 
 -- | What makes two Game values the same game: the full deal
@@ -224,7 +236,7 @@ initView = do
   H.liftAff (delay (Milliseconds 0.0))
   stopRadialSim -- a fresh deal or view switch invalidates the orbit sim
   st <- H.get
-  liftEffect clearView
+  liftEffect (clearView (containerSelector st))
   if st.packView then initPacks
   else do
     H.modify_ _
@@ -435,6 +447,20 @@ scheduleAnimFrame = do
       void $ liftEffect $ RAF.requestAnimationFrame \_ -> HS.notify listener AnimTick
     _ -> pure unit
 
+-- | Each mode owns a container id so the packs and grid hosts can share
+-- | a page without their HATS selectors colliding.
+containerId :: State -> String
+containerId st = if st.packView then "packs-view" else "cascade-view"
+
+containerSelector :: State -> String
+containerSelector st = "#" <> containerId st
+
+-- | The cross-reference emphasis for the current hover, or Nothing.
+implicatedNow :: State -> Maybe Crossref.Implicated
+implicatedNow st = st.hover <#> Crossref.implicated
+  st.game.result.playerCount
+  (facts (currentKnowledge st.game st.position))
+
 -- | Draw the grid's moving layers for the current state (chrome untouched).
 redrawCascade :: forall m. MonadAff m => HostM m
 redrawCascade = do
@@ -447,32 +473,48 @@ redrawCascade = do
         , wiring: st.wiring
         , layout: { from: st.layoutFrom, to: st.gridLayout, t: st.layoutT }
         , radialPos: st.radialPos
+        , hover: implicatedNow st
         , anim: st.cascadeAnim
         , onBar: \i -> HS.notify listener (BarClicked i)
+        , onHoverFact: \fid -> HS.notify listener (TokenHovered fid)
         }
     _ -> pure unit
 
--- | The per-position layers of the packs view (orbit guides, rail,
--- | verdict, sparkline) — everything that changes on scrub but not
--- | per animation frame.
+-- | The packs' per-position layer — the orbit guides.
 redrawPacksPosition :: forall m. MonadAff m => HostM m
 redrawPacksPosition = do
   st <- H.get
-  case st.animListener of
-    Nothing -> pure unit
-    Just listener ->
-      liftEffect $ PacksView.renderPacksPosition
-        { count: st.game.result.playerCount
-        , orbits: Packs.orbitSets (currentKnowledge st.game st.position)
-        , rail: eventLabel st.position (currentEvent st.game st.position)
-        , verdict: verdictFor st.game st.position
-        , strip: stripFor st.game st.position
-        , onBar: \i -> HS.notify listener (BarClicked i)
-        }
+  liftEffect $ PacksView.renderPacksPosition
+    { count: st.game.result.playerCount
+    , orbits: Packs.orbitSets (currentKnowledge st.game st.position)
+    }
 
--- | One frame of the packs: advance enter/exit progress, read the live
--- | simulation positions, rebuild the bubbles. The loop keeps itself
--- | alive while the simulation is hot or anything is mid-flight.
+-- | Rebuild the bubble layer from the simulation's current positions —
+-- | the shared body of the frame loop and the hover repaint.
+drawPacksFrame :: forall m. MonadAff m => HostM m
+drawPacksFrame = do
+  st <- H.get
+  case st.simHandle, st.animListener of
+    Just handle, Just listener | st.viewReady -> do
+      ns <- liftEffect handle.getNodes
+      liftEffect $ PacksView.renderPacksFrame
+        { envLoc: Packs.envelopeLoc st.game.result.playerCount
+        , nodes: ns
+        , states: st.packStates
+        , anim: st.packsAnim
+        , hover: hoverPoss st
+        , onHover: \k -> HS.notify listener (BubbleHovered k)
+        }
+    _, _ -> pure unit
+  where
+  -- packs dim only when the hover implicates at least one possibility
+  hoverPoss st = case implicatedNow st of
+    Just imp | not (Set.isEmpty imp.poss) -> Just imp.poss
+    _ -> Nothing
+
+-- | One frame of the packs: advance enter/exit progress, rebuild the
+-- | bubbles. The loop keeps itself alive while the simulation is hot or
+-- | anything is mid-flight.
 packsAnimFrame :: forall m. MonadAff m => HostM m
 packsAnimFrame = do
   st <- H.get
@@ -480,42 +522,20 @@ packsAnimFrame = do
     Just handle -> do
       let anim = PacksView.tickPacksAnim enterDelta st.packsAnim
       H.modify_ _ { packsAnim = anim }
-      ns <- liftEffect handle.getNodes
-      liftEffect $ PacksView.renderPacksFrame
-        { envLoc: Packs.envelopeLoc st.game.result.playerCount
-        , nodes: ns
-        , states: st.packStates
-        , anim
-        }
+      drawPacksFrame
       alpha <- liftEffect handle.getAlpha
       when (alpha > 0.0015 || PacksView.packsAnimActive anim) scheduleAnimFrame
     Nothing -> pure unit
 
--- HATS owns everything under #cascade-view; Halogen renders it childless
--- and never patches inside.
+-- HATS owns everything under the view container; Halogen renders it
+-- childless and never patches inside.
 render :: forall m. State -> H.ComponentHTML Action () m
 render st =
   HH.section [ HP.class_ (HH.ClassName "cascade-col") ]
     [ HH.div [ HP.class_ (HH.ClassName "cascade-toolbar") ]
-        ( [ viewButton st true "Packs"
-          , viewButton st false "Grid"
-          , HH.span [ HP.class_ (HH.ClassName "legend-sep") ] []
-          ]
-            <> (if st.packView then packsLegend else gridLegend st)
-        )
-    , HH.div [ HP.id "cascade-view" ] []
+        (if st.packView then packsLegend else gridLegend st)
+    , HH.div [ HP.id (containerId st) ] []
     ]
-
-viewButton :: forall m. State -> Boolean -> String -> H.ComponentHTML Action () m
-viewButton st packs label =
-  HH.button
-    [ HP.classes
-        ( map HH.ClassName
-            (if st.packView == packs then [ "view-btn", "active" ] else [ "view-btn" ])
-        )
-    , HE.onClick \_ -> SetPackView packs
-    ]
-    [ HH.text label ]
 
 -- | Legend for the possibility packs. No colour key — the table column's
 -- | card chips carry the same category hues, so the mapping is learned

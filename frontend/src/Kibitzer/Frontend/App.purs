@@ -37,7 +37,8 @@ import Kibitzer.Cascade (cascadeTimeline)
 import Kibitzer.Frontend.Component.CascadeHost as CascadeHost
 import Kibitzer.Frontend.Component.ControlPanel as ControlPanel
 import Kibitzer.Frontend.Component.TransportBar as TransportBar
-import Kibitzer.Frontend.Types (Game, Tab(..), maxPosition)
+import Kibitzer.Frontend.Crossref as Crossref
+import Kibitzer.Frontend.Types (Game, Tab(..), currentKnowledge, maxPosition)
 import Kibitzer.Frontend.View.About (aboutPage)
 import Kibitzer.Frontend.View.Board (boardPane)
 import Kibitzer.Frontend.View.Code (codePage)
@@ -45,6 +46,9 @@ import Kibitzer.Frontend.View.Feed (feedPane)
 import Kibitzer.Frontend.View.Notebook (notebookPane)
 import Kibitzer.Frontend.View.Terminal (terminalPane)
 import Kibitzer.Game (simulate)
+import Kibitzer.Knowledge (facts)
+import Data.Set (Set)
+import Data.Set as Set
 import Kibitzer.Infer (knowledgeTimeline)
 import Kibitzer.Observe (Perspective(..))
 import Kibitzer.Player (defaultPlayerCount, mkPlayerCount, playerCountToInt)
@@ -66,7 +70,7 @@ type State =
   , position :: Int
   , playing :: Boolean
   , tab :: Tab
-  , packView :: Boolean -- the cascade's Packs|Grid choice; here so it survives tab switches
+  , hover :: Maybe Crossref.Hover -- the page-wide cross-reference hover
   }
 
 data Action
@@ -75,17 +79,20 @@ data Action
   | HandleControls ControlPanel.Output
   | HandleTransport TransportBar.Output
   | HandleCascade CascadeHost.Output
+  | SetHover (Maybe Crossref.Hover)
   | Tick
 
 type Slots =
   ( controls :: ControlPanel.Slot
   , transport :: TransportBar.Slot
-  , cascade :: CascadeHost.Slot
+  , packs :: CascadeHost.Slot
+  , orbits :: CascadeHost.Slot
   )
 
 _controls = Proxy :: Proxy "controls"
 _transport = Proxy :: Proxy "transport"
-_cascade = Proxy :: Proxy "cascade"
+_packs = Proxy :: Proxy "packs"
+_orbits = Proxy :: Proxy "orbits"
 
 component :: forall q i o m. MonadAff m => H.Component q i o m
 component = H.mkComponent
@@ -95,7 +102,7 @@ component = H.mkComponent
       , position: 0
       , playing: false
       , tab: PlayTab
-      , packView: true
+      , hover: Nothing
       }
   , render
   , eval: H.mkEval (H.defaultEval { handleAction = handleAction, initialize = Just Initialize })
@@ -127,7 +134,8 @@ handleAction = case _ of
       when (not st.playing && atEnd) (moveTo 0)
   HandleCascade output -> case output of
     CascadeHost.ScrubRequested i -> moveTo i
-    CascadeHost.ViewChanged b -> H.modify_ _ { packView = b }
+    CascadeHost.HoverChanged h -> H.modify_ _ { hover = h }
+  SetHover h -> H.modify_ _ { hover = h }
   Tick -> do
     st <- H.get
     case st.game of
@@ -219,11 +227,13 @@ render st =
         , case st.game of
             Nothing -> HH.main_ [ HH.text "Dealing…" ]
             Just game ->
-              HH.main [ HP.class_ (HH.ClassName "split3") ]
-                [ tableColumn st game
-                , terminalPane game st.position
-                , HH.slot _cascade unit CascadeHost.component
-                    { game, position: st.position, packView: st.packView }
+              HH.main [ HP.classes (map HH.ClassName [ "split3", "crossref" ]) ]
+                [ HH.slot _packs unit CascadeHost.component
+                    { game, position: st.position, packView: true, hover: st.hover }
+                    HandleCascade
+                , terminalPane terminalHover (hoverEvents st game) game st.position
+                , HH.slot _orbits unit CascadeHost.component
+                    { game, position: st.position, packView: false, hover: st.hover }
                     HandleCascade
                 ]
         ]
@@ -234,13 +244,30 @@ render st =
             Just game ->
               HH.main [ HP.class_ (HH.ClassName "split3") ]
                 [ tableColumn st game
-                , terminalPane game st.position
+                , terminalPane terminalHover (hoverEvents st game) game st.position
                 , HH.div [ HP.class_ (HH.ClassName "watcher-pane") ]
                     [ notebookPane game st.position
                     , feedPane game st.position
                     ]
                 ]
         ]
+
+terminalHover :: { onEnter :: Int -> Action, onLeave :: Action }
+terminalHover =
+  { onEnter: \i -> SetHover (Just (Crossref.HoverEvent i))
+  , onLeave: SetHover Nothing
+  }
+
+-- | The terminal lines implicated by the current hover.
+hoverEvents :: State -> Game -> Set Int
+hoverEvents st game = case st.hover of
+  Nothing -> Set.empty
+  Just h ->
+    ( Crossref.implicated
+        game.result.playerCount
+        (facts (currentKnowledge game st.position))
+        h
+    ).events
 
 -- | The left column: the deal controls above the ground truth.
 tableColumn :: forall m. MonadAff m => State -> Game -> H.ComponentHTML Action Slots m

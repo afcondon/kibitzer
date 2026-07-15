@@ -47,6 +47,7 @@ derive instance Eq Glyph
 -- | as a native hover tooltip.
 type FactMark =
   { key :: String
+  , fid :: Int -- raw fact id, the hover join key
   , x :: Number
   , y :: Number
   , glyph :: Glyph
@@ -55,10 +56,14 @@ type FactMark =
   }
 
 -- | A mark plus its animation state, resolved for one tick of rendering.
+-- | `lit`/`dimmed` carry the cross-reference emphasis: both false when
+-- | nothing is hovered.
 type RenderMark =
   { mark :: FactMark
   , enterProgress :: Maybe Number
   , exitProgress :: Maybe Number
+  , lit :: Boolean
+  , dimmed :: Boolean
   }
 
 type CascadeAnim =
@@ -91,6 +96,7 @@ mkMark count f =
     cell = claimCell count f.claim
   in
     { key: factKey f
+    , fid: case f.id of FactId n -> n
     , x: cell.x
     , y: cell.y
     , glyph: case f.claim of
@@ -167,6 +173,17 @@ renderMarks count visible anim =
     let
       mark = mkMark count f
     in
-      { mark, enterProgress: Map.lookup mark.key anim.entering, exitProgress: Nothing }
+      { mark
+      , enterProgress: Map.lookup mark.key anim.entering
+      , exitProgress: Nothing
+      , lit: false
+      , dimmed: false
+      }
 
-  dying t = { mark: t.item, enterProgress: Nothing, exitProgress: Just t.progress }
+  dying t =
+    { mark: t.item
+    , enterProgress: Nothing
+    , exitProgress: Just t.progress
+    , lit: false
+    , dimmed: false
+    }

@@ -23,7 +23,7 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
-import Hylograph.HATS (Tree, elem, forEach, staticStr)
+import Hylograph.HATS (Tree, elem, forEach, onMouseEnter, onMouseLeave, staticStr, withBehaviors)
 import Hylograph.HATS.Friendly as F
 import Hylograph.HATS.InterpreterTick (rerender)
 import Hylograph.Internal.Element.Types (ElementType(..))
@@ -31,7 +31,6 @@ import Hylograph.Transition.Tick (Progress, Transitioning)
 import Hylograph.Transition.Tick as Tick
 import Kibitzer.Describe (playerName)
 import Kibitzer.Frontend.Cascade.Layout (svgHeight, svgWidth)
-import Kibitzer.Frontend.Cascade.Scene (StripBar, Verdict, railTree, stripTree)
 import Kibitzer.Frontend.Packs.Model (PackNode, PossInfo, PossState(..), anchorFor, bubbleRadius, categoryColour, envelopeLoc, orbitRadius)
 import Kibitzer.Player (PlayerCount, PlayerId(..), playerCountToInt)
 
@@ -70,10 +69,12 @@ accent :: String
 accent = "#d92b2b"
 
 -- | The SVG skeleton: envelope round-rect and seat letters as chrome,
--- | empty named groups for the moving layers.
+-- | empty named groups for the moving layers. Renders into its own
+-- | container (`#packs-view`) so the packs can live alongside the grid
+-- | host on one page without id collisions.
 renderPacksChrome :: PlayerCount -> Effect Unit
 renderPacksChrome count = do
-  _ <- rerender "#cascade-view" (chromeTree count)
+  _ <- rerender "#packs-view" (chromeTree count)
   pure unit
 
 chromeTree :: PlayerCount -> Tree
@@ -86,8 +87,6 @@ chromeTree count =
     [ elem Group [ F.attr "id" "packs-chrome" ] (seatLabels <> [ envelopeRect ])
     , elem Group [ F.attr "id" "packs-orbits" ] []
     , elem Group [ F.attr "id" "packs-bubbles" ] []
-    , elem Group [ F.attr "id" "cascade-rail" ] []
-    , elem Group [ F.attr "id" "cascade-strip" ] []
     ]
   where
   seatLabels = Array.range 0 (playerCountToInt count - 1) # map \j ->
@@ -135,21 +134,17 @@ chromeTree count =
             []
         ]
 
--- | The per-position layers: dashed orbit guides where a pack has live
--- | disjunction candidates, plus the shared rail/verdict and sparkline.
+-- | The per-position layer: dashed orbit guides where a pack has live
+-- | disjunction candidates. (The rail, verdict, and sparkline live with
+-- | the grid host — on the cross-referenced page the packs are the left
+-- | flank, not a standalone view.)
 renderPacksPosition
   :: { count :: PlayerCount
      , orbits :: Map Int (Set Int)
-     , rail :: String
-     , verdict :: Verdict
-     , strip :: Array StripBar
-     , onBar :: Int -> Effect Unit
      }
   -> Effect Unit
 renderPacksPosition input = do
   _ <- rerender "#packs-orbits" (orbitGuides input.count input.orbits)
-  _ <- rerender "#cascade-rail" (railTree input.rail input.verdict)
-  _ <- rerender "#cascade-strip" (stripTree input.onBar input.strip)
   pure unit
 
 orbitGuides :: PlayerCount -> Map Int (Set Int) -> Tree
@@ -175,18 +170,27 @@ orbitGuides count orbits =
 
 -- | One animation frame of bubbles: live possibilities at their sim
 -- | positions, plus departures chasing the live position of the copy
--- | that absorbed them.
+-- | that absorbed them. `hover` is the implicated possibility set while
+-- | anything is hovered — implicated bubbles get the accent ring, the
+-- | rest recede.
 renderPacksFrame
   :: { envLoc :: Int
      , nodes :: Array PackNode
      , states :: Map Int PossInfo
      , anim :: PacksAnim
+     , hover :: Maybe (Set Int)
+     , onHover :: Maybe { loc :: Int, card :: Int } -> Effect Unit
      }
   -> Effect Unit
-renderPacksFrame { envLoc, nodes, states, anim } = do
+renderPacksFrame { envLoc, nodes, states, anim, hover, onHover } = do
   _ <- rerender "#packs-bubbles" (forEach "bubbles" Circle bubbles _.key template)
   pure unit
   where
+  emphasis nodeId = case hover of
+    Nothing -> { dim: 1.0, hit: false }
+    Just poss ->
+      if Set.member nodeId poss then { dim: 1.0, hit: true }
+      else { dim: 0.22, hit: false }
   positionOf :: Int -> Maybe { x :: Number, y :: Number }
   positionOf i = map (\n -> { x: n.x, y: n.y }) (Array.find (\n -> n.id == i) nodes)
 
@@ -197,6 +201,7 @@ renderPacksFrame { envLoc, nodes, states, anim } = do
       let
         enter = fromMaybe 1.0 (map (clamp 0.0 1.0) (Map.lookup n.id anim.entering))
         pop = Tick.easeOutCubic enter
+        e = emphasis n.id
         base = case info.state of
           Ghost -> { opacity: 0.28, stroke: "none", strokeW: 0.0 }
           Confirmed ->
@@ -212,10 +217,11 @@ renderPacksFrame { envLoc, nodes, states, anim } = do
           , y: n.y
           , r: bubbleRadius * pop
           , fill: categoryColour n.card
-          , opacity: base.opacity * pop
-          , stroke: base.stroke
-          , strokeW: base.strokeW
+          , opacity: (if e.hit then max base.opacity 0.95 else base.opacity) * pop * e.dim
+          , stroke: if e.hit then accent else base.stroke
+          , strokeW: if e.hit then 2.5 else base.strokeW
           , tip: info.tip
+          , hoverKey: Just { loc: n.loc, card: n.card }
           }
     _ -> Nothing
 
@@ -232,19 +238,32 @@ renderPacksFrame { envLoc, nodes, states, anim } = do
       , r: Tick.lerp bubbleRadius 2.0 eased
       , fill: categoryColour t.item.card
       , opacity: Tick.lerp 0.85 0.15 t.progress
+          * (case hover of
+              Nothing -> 1.0
+              Just _ -> 0.22)
       , stroke: "none"
       , strokeW: 0.0
       , tip: ""
+      , hoverKey: Nothing
       }
 
   template b =
-    elem Circle
-      [ F.cx b.x
-      , F.cy b.y
-      , F.r b.r
-      , F.fill b.fill
-      , F.opacity (show b.opacity)
-      , F.stroke b.stroke
-      , F.strokeWidth b.strokeW
-      ]
-      (if b.tip == "" then [] else [ elem Title [ staticStr "textContent" b.tip ] [] ])
+    let
+      circle = elem Circle
+        [ F.cx b.x
+        , F.cy b.y
+        , F.r b.r
+        , F.fill b.fill
+        , F.opacity (show b.opacity)
+        , F.stroke b.stroke
+        , F.strokeWidth b.strokeW
+        ]
+        (if b.tip == "" then [] else [ elem Title [ staticStr "textContent" b.tip ] [] ])
+    in
+      case b.hoverKey of
+        Nothing -> circle
+        Just k -> withBehaviors
+          [ onMouseEnter (onHover (Just k))
+          , onMouseLeave (onHover Nothing)
+          ]
+          circle

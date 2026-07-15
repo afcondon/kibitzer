@@ -661,3 +661,14 @@ h2 {
   .terminal { max-height: 14rem; }
   header { grid-template-columns: 1fr; align-items: start; gap: 1rem; }
 }
+
+/* ---------- cross-referenced cascade: packs | terminal | orbits ---------- */
+
+.split3.crossref { grid-template-columns: 8fr 4fr 8fr; }
+
+.term-line:hover { background: #f4f4f4; }
+
+.term-line.hl {
+  background: #faf0f0;
+  box-shadow: inset 3px 0 0 var(--accent, #d92b2b);
+}

@@ -29,11 +29,11 @@ await page.evaluate(() => {
   btn.click();
 });
 await sleep(400);
-// the packs are the default view now — this smoke tests the grid
+// orbits are the grid's default layout — this smoke tests the table
 await page.evaluate(() => {
-  [...document.querySelectorAll('.view-btn')].find((b) => b.textContent === 'Grid').click();
+  [...document.querySelectorAll('.view-btn')].find((b) => b.textContent === 'Table').click();
 });
-await sleep(600);
+await sleep(900);
 
 const chrome0 = await page.evaluate(() => ({
   svg: !!document.querySelector('#cascade-svg'),
@@ -151,6 +151,11 @@ await page.evaluate(() => {
   [...document.querySelectorAll('.tabs .tab')].find((b) => b.textContent === 'Cascade').click();
 });
 await sleep(700);
+// a remount resets the layout to orbits; return to the table
+await page.evaluate(() => {
+  [...document.querySelectorAll('.view-btn')].find((b) => b.textContent === 'Table').click();
+});
+await sleep(900);
 const back2 = await page.evaluate(() => ({
   svgs: document.querySelectorAll('#cascade-svg').length,
   labels: document.querySelectorAll('#cascade-chrome text').length,

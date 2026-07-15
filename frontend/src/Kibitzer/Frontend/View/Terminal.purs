@@ -1,21 +1,32 @@
 -- | The middle column: the game's event stream as a scrolling terminal,
 -- | newest line at the bottom, under the headline counter. This is the
 -- | ground-truth transcript — the same prose the table's stage shows one
--- | line at a time.
+-- | line at a time. On the cross-referenced page each line is also a
+-- | hover source and target: hovering it lights everything the event
+-- | taught, and hovering a fact elsewhere lights the lines it came from.
 module Kibitzer.Frontend.View.Terminal (terminalPane) where
 
 import Prelude
 
 import Data.Array as Array
+import Data.Set (Set)
+import Data.Set as Set
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Kibitzer.Describe (describeEvent)
 import Kibitzer.Event (Event)
 import Kibitzer.Frontend.Types (Game, currentKnowledge)
 import Kibitzer.Knowledge (factCount)
 
-terminalPane :: forall w a. Game -> Int -> HH.HTML w a
-terminalPane game position =
+terminalPane
+  :: forall w a
+   . { onEnter :: Int -> a, onLeave :: a }
+  -> Set Int -- event indexes implicated by the current hover
+  -> Game
+  -> Int
+  -> HH.HTML w a
+terminalPane hoverHandlers implicated game position =
   HH.section [ HP.class_ (HH.ClassName "terminal-pane") ]
     [ counter
     , if position == 0 then
@@ -45,7 +56,14 @@ terminalPane game position =
   line i event =
     HH.li
       [ HP.classes
-          (map HH.ClassName (if i == position - 1 then [ "term-line", "latest" ] else [ "term-line" ]))
+          ( map HH.ClassName
+              ( [ "term-line" ]
+                  <> (if i == position - 1 then [ "latest" ] else [])
+                  <> (if Set.member i implicated then [ "hl" ] else [])
+              )
+          )
+      , HE.onMouseEnter \_ -> hoverHandlers.onEnter i
+      , HE.onMouseLeave \_ -> hoverHandlers.onLeave
       ]
       [ HH.span [ HP.class_ (HH.ClassName "term-ref") ] [ HH.text ("E" <> show i) ]
       , HH.span_ [ HH.text (describeEvent event) ]

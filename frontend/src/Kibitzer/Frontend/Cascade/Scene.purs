@@ -24,7 +24,7 @@ import Data.Foldable (maximum, minimum)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
-import Hylograph.HATS (Tree, elem, forEach, onClick, staticStr, withBehaviors)
+import Hylograph.HATS (Tree, elem, forEach, onClick, onMouseEnter, onMouseLeave, staticStr, withBehaviors)
 import Hylograph.HATS.Friendly as F
 import Hylograph.HATS.InterpreterTick (clearContainer, rerender)
 import Hylograph.Internal.Element.Types (ElementType(..))
@@ -66,6 +66,7 @@ type SceneInput =
   , rings :: Array Radial.RingGuide
   , ringsOpacity :: Number -- ditto for the radial view's orbit guides
   , tokens :: Number -- 0 = notebook glyphs (✓/×), 1 = "E23" event tokens
+  , onHoverFact :: Maybe Int -> Effect Unit -- cross-reference hover, by raw fact id
   , rail :: String
   , verdict :: Verdict
   , strip :: Array StripBar
@@ -92,11 +93,11 @@ accentFaint = "#e9a3a3"
 hairline :: String
 hairline = "#e6e6e6"
 
--- | Empty the whole cascade container. Called when switching between the
--- | packs and grid views: HATS diffs against whatever DOM it finds, and
--- | diffing one view's chrome against the other's leaves debris.
-clearView :: Effect Unit
-clearView = clearContainer "#cascade-view"
+-- | Empty a view container before rebuilding: HATS diffs against
+-- | whatever DOM it finds, and diffing one view's chrome against
+-- | another's leaves debris.
+clearView :: String -> Effect Unit
+clearView = clearContainer
 
 -- | The SVG skeleton: static chrome drawn once, then one empty named
 -- | group per moving layer (z-order: edges under brackets under marks).
@@ -113,7 +114,7 @@ renderScene input = do
   _ <- rerender "#cascade-rings" (ringsTree input.ringsOpacity input.rings)
   _ <- rerender "#cascade-edges" (edgesTree input.edges)
   _ <- rerender "#cascade-brackets" (bracketsTree input.bracketFade input.brackets)
-  _ <- rerender "#cascade-marks" (marksTree input.tokens input.marks)
+  _ <- rerender "#cascade-marks" (marksTree input.tokens input.onHoverFact input.marks)
   _ <- rerender "#cascade-rail" (railTree input.rail input.verdict)
   _ <- rerender "#cascade-strip" (stripTree input.onBar input.strip)
   pure unit
@@ -189,9 +190,9 @@ gridChrome count = rowLabels <> rowLines <> headers
     in
       Array.snoc (map seat (Array.range 0 (playerCountToInt count - 1))) env
 
-marksTree :: Number -> Array RenderMark -> Tree
-marksTree tokens rmarks =
-  forEach "marks" Group rmarks (_.mark.key) (markTemplate tokens)
+marksTree :: Number -> (Maybe Int -> Effect Unit) -> Array RenderMark -> Tree
+marksTree tokens onHover rmarks =
+  forEach "marks" Group rmarks (_.mark.key) (markTemplate tokens onHover)
 
 -- | One mark, its attributes a pure function of animation progress:
 -- | entering marks fly in from the event rail and fade up; exiting marks
@@ -200,17 +201,20 @@ marksTree tokens rmarks =
 -- | view (bare grey for eliminations, ring-stroked for located cards,
 -- | inverted on the accent for envelope certainties). Whichever layer is
 -- | fully faded is skipped, so the table's DOM stays what it was.
-markTemplate :: Number -> RenderMark -> Tree
-markTemplate tokens rm =
+markTemplate :: Number -> (Maybe Int -> Effect Unit) -> RenderMark -> Tree
+markTemplate tokens onHover rm =
   let
     p = case rm.enterProgress of
       Just raw -> Tick.easeOutCubic (clamp 0.0 1.0 raw)
       Nothing -> 1.0
     x = Tick.lerp L.railAnchor.x rm.mark.x p
     y = Tick.lerp L.railAnchor.y rm.mark.y p
+    -- cross-reference emphasis: unimplicated marks recede while
+    -- something is hovered
+    dim = if rm.dimmed then 0.16 else 1.0
     fade base = case rm.exitProgress of
-      Just ep -> Tick.lerp base 0.0 ep
-      Nothing -> base * p
+      Just ep -> Tick.lerp base 0.0 ep * dim
+      Nothing -> base * p * dim
     dot radius colour = elem Circle
       [ F.cx x
       , F.cy y
@@ -266,11 +270,36 @@ markTemplate tokens rm =
         GEnvOut -> [ erefText "8" accentFaint "500" ]
         GHolds -> [ tokenRing 10.0 "#ffffff" ink, erefText "7.5" ink "600" ]
         GEnvIn -> [ tokenRing 10.5 accent accent, erefText "7.5" "#ffffff" "600" ]
+    -- the implicated marks get a halo while a hover is live
+    haloLayer =
+      if not rm.lit then []
+      else
+        [ elem Circle
+            [ F.cx x
+            , F.cy y
+            , F.r (Tick.lerp 10.0 13.5 tokens)
+            , F.fill "none"
+            , F.stroke accent
+            , F.strokeWidth 1.5
+            , F.opacity (show (fade 0.9 / dim))
+            ]
+            []
+        ]
+    -- a fattened invisible twin keeps small tokens hoverable
+    hoverTarget = elem Circle
+      [ F.cx x
+      , F.cy y
+      , F.r 11.0
+      , F.fill "transparent"
+      ]
+      [ elem Title [ staticStr "textContent" rm.mark.tip ] [] ]
   in
-    elem Group []
-      ( glyphLayer <> tokenLayer
-          <> [ elem Title [ staticStr "textContent" rm.mark.tip ] [] ]
-      )
+    withBehaviors
+      [ onMouseEnter (onHover (Just rm.mark.fid))
+      , onMouseLeave (onHover Nothing)
+      ]
+      $ elem Group []
+          (glyphLayer <> tokenLayer <> haloLayer <> [ hoverTarget ])
 
 -- | Each edge is a visible hairline plus an invisible fat twin — a 1px
 -- | line is unhoverable, and the provenance tooltip is the whole point.

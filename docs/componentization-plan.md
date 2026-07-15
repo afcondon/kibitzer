@@ -110,7 +110,20 @@ continuous. Lessons from the doing:
 - dag-smoke grew into a 20-check three-layout suite (morphs, ring
   guides, orbit physics, bullseye distances on a solved game).
 
-## 2¾. The cross-referenced cascade (Andrew, 2026-07-15 — queued)
+## 2¾. The cross-referenced cascade (Andrew, 2026-07-15) — DONE same day
+
+Built as designed below, same session. Notes from the doing: the two
+hosts are two instances of CascadeHost (packs / grid) with per-mode
+container ids (`#packs-view` / `#cascade-view`); the packs lost their
+rail/strip (the orbits column carries verdict + sparkline); hover is
+`Maybe Crossref.Hover` in App, flowing down as input and back up as
+`HoverChanged`; `Kibitzer.Frontend.Crossref` closes hover seeds over
+premise ancestry, so hovering a deep fact lights the whole argument
+that fed it — tokens, edges, bubbles, terminal lines. Grid default is
+now Orbits. Andrew expects this page to become the principal view,
+behind a clean intro page (queued below as the tab restructure).
+
+### Original design (as built)
 
 Three columns on one tab: **packs on the left, the event terminal in
 the centre, orbits on the right** — the two circular views flanking

@@ -17,8 +17,8 @@ await page.goto('http://localhost:3026/?seed=42&players=4', { waitUntil: 'networ
 await sleep(300);
 await page.evaluate(() => [...document.querySelectorAll('.tabs .tab')].find(b => b.textContent === 'Cascade').click());
 await sleep(400);
-await page.evaluate(() => [...document.querySelectorAll('.view-btn')].find(b => b.textContent === 'Grid').click());
-await sleep(500);
+await page.evaluate(() => [...document.querySelectorAll('.view-btn')].find(b => b.textContent === 'Table').click());
+await sleep(900);
 await page.evaluate(() => [...document.querySelectorAll('.transport-btn')].find(b => b.textContent === '⏭').click());
 await sleep(1200);
 
@@ -101,11 +101,9 @@ await page.goto('http://localhost:3026/?seed=33&players=6', { waitUntil: 'networ
 await sleep(300);
 await page.evaluate(() => [...document.querySelectorAll('.tabs .tab')].find(b => b.textContent === 'Cascade').click());
 await sleep(400);
-await page.evaluate(() => [...document.querySelectorAll('.view-btn')].find(b => b.textContent === 'Grid').click());
-await sleep(500);
 await page.evaluate(() => [...document.querySelectorAll('.transport-btn')].find(b => b.textContent === '⏭').click());
 await sleep(900);
-await clickLayout('Orbits');
+// orbits are already the default layout on a fresh mount
 await sleep(3500); // dense game; let the sim settle properly
 const bullseye = await page.evaluate(() => {
   const cx = 380, cy = 350;

@@ -71,19 +71,46 @@ const t3 = await page.evaluate(() => ({
 console.log(`INFO  after 20 events: ${t3.bubbles} bubbles, ${t3.titles} tooltips`);
 check('tooltips on bubbles', t3.titles > 100, `got ${t3.titles}`);
 
-// view switcher roundtrip
-await page.evaluate(() => [...document.querySelectorAll('.view-btn')].find(b => b.textContent === 'Grid').click());
-await sleep(600);
-const grid = await page.evaluate(() => !!document.querySelector('#cascade-svg') && !document.querySelector('#packs-svg'));
-check('Grid button swaps to the grid view', grid);
-await page.evaluate(() => [...document.querySelectorAll('.view-btn')].find(b => b.textContent === 'Packs').click());
-await sleep(2000);
-const packsBack = await page.evaluate(() => ({
-  svg: !!document.querySelector('#packs-svg'),
-  svgs: document.querySelectorAll('#packs-svg, #cascade-svg').length,
-  bubbles: document.querySelectorAll('#packs-bubbles circle').length,
+// both views coexist on the cross-referenced page
+const both = await page.evaluate(() => ({
+  packs: document.querySelectorAll('#packs-svg').length,
+  grid: document.querySelectorAll('#cascade-svg').length,
 }));
-check('Packs button swaps back, single SVG', packsBack.svg && packsBack.svgs === 1, JSON.stringify(packsBack));
+check('packs and orbits coexist, one SVG each', both.packs === 1 && both.grid === 1, JSON.stringify(both));
+
+// cross-reference: hovering a confirmed bubble dims the rest and lights orbit marks
+await page.evaluate(() => [...document.querySelectorAll('.transport-btn')].find(b => b.textContent === '⏭').click());
+await sleep(4000);
+const target = await page.evaluate(() => {
+  const el = [...document.querySelectorAll('#packs-bubbles circle')]
+    .find(c => c.getAttribute('stroke') === '#141414');
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+});
+check('found a located bubble to hover', !!target);
+if (target) {
+  await page.mouse.move(target.x, target.y);
+  await sleep(600);
+  const hovered = await page.evaluate(() => ({
+    accentBubbles: [...document.querySelectorAll('#packs-bubbles circle')]
+      .filter(c => c.getAttribute('stroke') === '#d92b2b').length,
+    dimmedBubbles: [...document.querySelectorAll('#packs-bubbles circle')]
+      .filter(c => parseFloat(c.getAttribute('opacity')) < 0.25).length,
+    litMarks: document.querySelectorAll('#cascade-marks g').length > 0
+      && [...document.querySelectorAll('#cascade-marks circle')]
+        .some(c => c.getAttribute('stroke') === '#d92b2b' && c.getAttribute('fill') === 'none'),
+  }));
+  check('hover: implicated bubble accent-ringed', hovered.accentBubbles >= 1, `got ${hovered.accentBubbles}`);
+  check('hover: the rest of the packs recede', hovered.dimmedBubbles > 5, `got ${hovered.dimmedBubbles}`);
+  check('hover: orbit marks halo across the page', hovered.litMarks);
+  await page.mouse.move(5, 5);
+  await sleep(500);
+  const restored = await page.evaluate(() =>
+    [...document.querySelectorAll('#packs-bubbles circle')]
+      .filter(c => parseFloat(c.getAttribute('opacity')) < 0.25).length);
+  check('unhover restores the packs', restored < 5, `still dimmed: ${restored}`);
+}
 
 check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 await page.screenshot({ path: 'packs-early.png' });

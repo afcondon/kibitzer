@@ -28,6 +28,7 @@ import Kibitzer.Frontend.Cascade.Anim (CascadeAnim, renderMarks)
 import Kibitzer.Frontend.Cascade.Layout as L
 import Kibitzer.Frontend.Cascade.Radial as Radial
 import Kibitzer.Frontend.Cascade.Scene (Bracket, EdgeLine, StripBar, Verdict(..), eventLabel, renderScene)
+import Kibitzer.Frontend.Crossref as Crossref
 import Kibitzer.Frontend.Types (Game, currentEvent, currentKnowledge)
 import Kibitzer.Knowledge (Disjunction(..), Fact, FactId(..), envelopeIn, facts, solutionIfKnown)
 import Kibitzer.Player (PlayerId(..))
@@ -38,11 +39,13 @@ redraw
      , wiring :: Boolean
      , layout :: { from :: L.GridLayout, to :: L.GridLayout, t :: Number }
      , radialPos :: Map Int { x :: Number, y :: Number } -- live orbit positions by fact id
+     , hover :: Maybe Crossref.Implicated -- the cross-reference emphasis, if anything is hovered
      , anim :: CascadeAnim
      , onBar :: Int -> Effect Unit
+     , onHoverFact :: Maybe Int -> Effect Unit
      }
   -> Effect Unit
-redraw { game, position, wiring, layout, radialPos, anim, onBar } = renderScene
+redraw { game, position, wiring, layout, radialPos, hover, anim, onBar, onHoverFact } = renderScene
   { count
   , marks
   , edges
@@ -54,6 +57,7 @@ redraw { game, position, wiring, layout, radialPos, anim, onBar } = renderScene
   , rings: Radial.ringGuides maxDepth
   , ringsOpacity: radialAmount * 0.85
   , tokens: radialAmount
+  , onHoverFact
   , rail: eventLabel position (currentEvent game position)
   , verdict: verdictFor game position
   , strip: stripFor game position
@@ -136,13 +140,28 @@ redraw { game, position, wiring, layout, radialPos, anim, onBar } = renderScene
     in
       { x: Tick.lerp a.x b.x m, y: Tick.lerp a.y b.y m }
 
+  -- the hover emphasis is live only when the hovered thing implicates
+  -- at least one visible fact
+  hoverFacts :: Maybe (Set.Set Int)
+  hoverFacts = case hover of
+    Just imp | not (Set.isEmpty imp.facts) -> Just imp.facts
+    _ -> Nothing
+
   -- every mark — the living and the dying alike — is repositioned into
   -- the current layout, so backward scrubs fade facts out where they
-  -- stood, not at their table cell
-  marks = renderMarks count visible anim <#> \rm ->
-    case factOfKey rm.mark.key of
-      Just f -> let p = posOf f in rm { mark = rm.mark { x = p.x, y = p.y } }
-      Nothing -> rm
+  -- stood, not at their table cell; the cross-reference emphasis rides
+  -- along
+  marks = renderMarks count visible anim <#> \rm0 ->
+    let
+      rm = case hoverFacts of
+        Nothing -> rm0
+        Just fs ->
+          let hit = Set.member rm0.mark.fid fs
+          in rm0 { lit = hit, dimmed = not hit }
+    in
+      case factOfKey rm.mark.key of
+        Just f -> let p = posOf f in rm { mark = rm.mark { x = p.x, y = p.y } }
+        Nothing -> rm
 
   factOfKey :: String -> Maybe Fact
   factOfKey key = do
@@ -162,7 +181,7 @@ redraw { game, position, wiring, layout, radialPos, anim, onBar } = renderScene
     toFact <- Array.index allFacts toN
     let from = posOf fromFact
     let to = posOf toFact
-    opacity <- case Map.lookup ("f" <> show toN) anim.entering of
+    baseOpacity <- case Map.lookup ("f" <> show toN) anim.entering of
       Just p -> Just (Tick.lerpClamped 0.0 0.75 (Tick.easeOutCubic (clamp 0.0 1.0 p)))
       Nothing ->
         let
@@ -171,6 +190,14 @@ redraw { game, position, wiring, layout, radialPos, anim, onBar } = renderScene
           settled = max (if wiring then 0.12 else 0.0) (0.3 * (1.0 - tableAmount))
         in
           if settled > 0.005 then Just settled else Nothing
+    -- hover: edges inside the implicated ancestry come forward, the
+    -- rest recede
+    let
+      opacity = case hoverFacts of
+        Nothing -> baseOpacity
+        Just fs ->
+          if Set.member fromN fs && Set.member toN fs then max baseOpacity 0.7
+          else baseOpacity * 0.12
     pure
       { key: "e" <> show fromN <> "-" <> show toN
       , x1: from.x
