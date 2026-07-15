@@ -5,7 +5,7 @@
 # is the manual fallback when the router isn't running.
 PORT ?= 3026
 
-.PHONY: help bootstrap build test example skylines bundle serve clean
+.PHONY: help bootstrap build test example skylines orbits bundle serve clean
 
 help:
 	@echo "kibitzer targets:"
@@ -14,6 +14,7 @@ help:
 	@echo "  test       run the kibitzer-core test suite"
 	@echo "  example    run the CLI transcript demo (SEED=42 to override)"
 	@echo "  skylines   regenerate frontend/public/skylines.html (small multiples)"
+	@echo "  orbits     regenerate frontend/public/orbits.html (radial small multiples)"
 	@echo "  bundle     bundle the frontend to frontend/public/bundle.js"
 	@echo "  serve      serve the frontend on http://localhost:$(PORT)"
 	@echo "  clean      remove build output"
@@ -33,6 +34,9 @@ example:
 
 skylines:
 	spago run --quiet -p kibitzer-example -- skylines > frontend/public/skylines.html
+
+orbits:
+	spago run --quiet -p kibitzer-example -- orbits > frontend/public/orbits.html
 
 bundle:
 	spago bundle -p kibitzer-frontend

@@ -65,6 +65,7 @@ type SceneInput =
   , dagOpacity :: Number -- the skyline's level axis fades in as the grid fades out
   , rings :: Array Radial.RingGuide
   , ringsOpacity :: Number -- ditto for the radial view's orbit guides
+  , tokens :: Number -- 0 = notebook glyphs (✓/×), 1 = "E23" event tokens
   , rail :: String
   , verdict :: Verdict
   , strip :: Array StripBar
@@ -112,7 +113,7 @@ renderScene input = do
   _ <- rerender "#cascade-rings" (ringsTree input.ringsOpacity input.rings)
   _ <- rerender "#cascade-edges" (edgesTree input.edges)
   _ <- rerender "#cascade-brackets" (bracketsTree input.bracketFade input.brackets)
-  _ <- rerender "#cascade-marks" (marksTree input.marks)
+  _ <- rerender "#cascade-marks" (marksTree input.tokens input.marks)
   _ <- rerender "#cascade-rail" (railTree input.rail input.verdict)
   _ <- rerender "#cascade-strip" (stripTree input.onBar input.strip)
   pure unit
@@ -188,15 +189,19 @@ gridChrome count = rowLabels <> rowLines <> headers
     in
       Array.snoc (map seat (Array.range 0 (playerCountToInt count - 1))) env
 
-marksTree :: Array RenderMark -> Tree
-marksTree rmarks =
-  forEach "marks" Group rmarks (_.mark.key) markTemplate
+marksTree :: Number -> Array RenderMark -> Tree
+marksTree tokens rmarks =
+  forEach "marks" Group rmarks (_.mark.key) (markTemplate tokens)
 
 -- | One mark, its attributes a pure function of animation progress:
 -- | entering marks fly in from the event rail and fade up; exiting marks
--- | fade out in place.
-markTemplate :: RenderMark -> Tree
-markTemplate rm =
+-- | fade out in place. `tokens` crossfades the vocabulary — notebook
+-- | glyphs in the table and skyline, "E23" event tokens in the radial
+-- | view (bare grey for eliminations, ring-stroked for located cards,
+-- | inverted on the accent for envelope certainties). Whichever layer is
+-- | fully faded is skipped, so the table's DOM stays what it was.
+markTemplate :: Number -> RenderMark -> Tree
+markTemplate tokens rm =
   let
     p = case rm.enterProgress of
       Just raw -> Tick.easeOutCubic (clamp 0.0 1.0 raw)
@@ -211,7 +216,7 @@ markTemplate rm =
       , F.cy y
       , F.r (Tick.lerp (radius * 1.8) radius p)
       , F.fill colour
-      , F.opacity (show (fade 1.0))
+      , F.opacity (show (fade 1.0 * (1.0 - tokens)))
       ]
       []
     cross colour = elem Text
@@ -220,19 +225,52 @@ markTemplate rm =
       , F.textAnchor "middle"
       , F.fontSize "14"
       , F.fill colour
-      , F.opacity (show (fade 0.9))
+      , F.opacity (show (fade 0.9 * (1.0 - tokens)))
       , staticStr "textContent" "×"
       ]
       []
+    erefText size colour weight = elem Text
+      [ F.x x
+      , F.y (y + 2.6)
+      , F.textAnchor "middle"
+      , F.fontSize size
+      , F.fontWeight weight
+      , F.fill colour
+      , F.opacity (show (fade 0.95 * tokens))
+      , staticStr "textContent" rm.mark.eref
+      ]
+      []
+    tokenRing radius fill stroke = elem Circle
+      [ F.cx x
+      , F.cy y
+      , F.r radius
+      , F.fill fill
+      , F.stroke stroke
+      , F.strokeWidth 1.3
+      , F.opacity (show (fade 1.0 * tokens))
+      ]
+      []
+    glyphLayer =
+      if tokens > 0.995 then []
+      else
+        [ case rm.mark.glyph of
+            GHolds -> dot 6.0 ink
+            GEnvIn -> dot 7.5 accent
+            GLacks -> cross faint
+            GEnvOut -> cross accentFaint
+        ]
+    tokenLayer =
+      if tokens < 0.005 then []
+      else case rm.mark.glyph of
+        GLacks -> [ erefText "8" "#9a9a9a" "400" ]
+        GEnvOut -> [ erefText "8" accentFaint "500" ]
+        GHolds -> [ tokenRing 10.0 "#ffffff" ink, erefText "7.5" ink "600" ]
+        GEnvIn -> [ tokenRing 10.5 accent accent, erefText "7.5" "#ffffff" "600" ]
   in
     elem Group []
-      [ case rm.mark.glyph of
-          GHolds -> dot 6.0 ink
-          GEnvIn -> dot 7.5 accent
-          GLacks -> cross faint
-          GEnvOut -> cross accentFaint
-      , elem Title [ staticStr "textContent" rm.mark.tip ] []
-      ]
+      ( glyphLayer <> tokenLayer
+          <> [ elem Title [ staticStr "textContent" rm.mark.tip ] [] ]
+      )
 
 -- | Each edge is a visible hairline plus an invisible fat twin — a 1px
 -- | line is unhoverable, and the provenance tooltip is the whole point.
@@ -341,11 +379,11 @@ ringsTree opacity rings =
         , F.opacity (show (opacity * if g.bullseye then 0.55 else 1.0))
         ]
       dash = if g.bullseye then [ staticStr "stroke-dasharray" "2 4" ] else []
-      -- the bullseye's caption sits in its (empty) centre; the dots
-      -- orbit the ring above it, so the top edge would hide the words
+      -- the bullseye's caption hangs below its guide; the certainties
+      -- cluster at the centre itself
       caption = elem Text
         [ F.x Radial.centre.x
-        , F.y (if g.bullseye then Radial.centre.y + 3.0 else Radial.centre.y - g.r - 5.0)
+        , F.y (if g.bullseye then Radial.centre.y + g.r + 22.0 else Radial.centre.y - g.r - 5.0)
         , F.textAnchor "middle"
         , F.fontSize "10"
         , F.fill (if g.bullseye then accent else "#767676")

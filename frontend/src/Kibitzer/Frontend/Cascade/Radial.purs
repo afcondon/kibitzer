@@ -18,6 +18,7 @@ module Kibitzer.Frontend.Cascade.Radial
   , RadialNode
   , RingGuide
   , centre
+  , bullseyeGuide
   , ringGuides
   , analyticPos
   , templateNode
@@ -53,9 +54,16 @@ outerRadius :: Number
 outerRadius = 268.0
 
 -- | Where the three `InEnvelope` certainties come to rest, whatever
--- | their derivation depth — the point of the whole argument.
+-- | their derivation depth — the point of the whole argument. Zero:
+-- | they get pulled to the centre itself and collision fans them into
+-- | a tight cluster there.
 bullseyeRadius :: Number
-bullseyeRadius = 26.0
+bullseyeRadius = 0.0
+
+-- | The dashed target drawn around the centre — display only, decoupled
+-- | from the force radius so the certainties land *inside* it.
+bullseyeGuide :: Number
+bullseyeGuide = 22.0
 
 -- | The deepest ordinary ring stays clear of the bullseye.
 innerFloor :: Number
@@ -97,7 +105,7 @@ type RingGuide = { r :: Number, label :: String, bullseye :: Boolean }
 ringGuides :: Int -> Array RingGuide
 ringGuides maxDepth =
   Array.cons
-    { r: bullseyeRadius, label: "the envelope", bullseye: true }
+    { r: bullseyeGuide, label: "the envelope", bullseye: true }
     ( Array.range 0 maxDepth <#> \d ->
         { r: depthRing maxDepth d
         , label:
@@ -159,7 +167,7 @@ positionMap = Map.fromFoldable <<< map \n -> Tuple n.id { x: n.x, y: n.y }
 setupFor :: Int -> Setup RadialNode
 setupFor maxDepth =
   setup "radial-dag"
-    ( [ collide "separate" # withRadius (static 9.5)
+    ( [ collide "separate" # withRadius (static 11.5) -- "E123" tokens are wider than dots
       , link "premises"
           # withStrength (static 0.12)
           # withDistance (static (ringGap maxDepth))
@@ -169,10 +177,15 @@ setupFor maxDepth =
         <> ringForces
     )
   where
-  ringForces = ringGuides maxDepth <#> \g ->
-    radial ("ring-" <> show g.r)
-      # withRadius (static g.r)
+  -- force targets, not display guides: the bullseye force pulls to the
+  -- centre itself while its dashed guide is drawn wider
+  ringValues = Array.cons bullseyeRadius
+    (Array.range 0 maxDepth <#> depthRing maxDepth)
+
+  ringForces = ringValues <#> \r ->
+    radial ("ring-" <> show r)
+      # withRadius (static r)
       # withX (static centre.x)
       # withY (static centre.y)
       # withStrength (static 0.55)
-      # withFilter (\n -> n.ring == g.r)
+      # withFilter (\n -> n.ring == r)

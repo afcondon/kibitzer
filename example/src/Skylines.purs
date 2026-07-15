@@ -3,7 +3,7 @@
 -- | six-deep cathedrals, watcher wins next to games that never close.
 -- | Emits a self-contained HTML page (stdout); the Makefile drops it at
 -- | frontend/public/skylines.html.
-module Example.Skylines (runSkylines) where
+module Example.Skylines (Sample, runSkylines, curate, caption) where
 
 import Prelude
 

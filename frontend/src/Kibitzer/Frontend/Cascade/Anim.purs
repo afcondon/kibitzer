@@ -33,7 +33,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Set as Set
 import Hylograph.Transition.Tick (Progress, Transitioning)
 import Hylograph.Transition.Tick as Tick
-import Kibitzer.Describe (describeFact)
+import Kibitzer.Describe (describeFact, eventRef)
 import Kibitzer.Frontend.Cascade.Layout (claimCell)
 import Kibitzer.Knowledge (Claim(..), Fact, FactId(..))
 import Kibitzer.Player (PlayerCount)
@@ -43,12 +43,14 @@ data Glyph = GHolds | GLacks | GEnvIn | GEnvOut
 derive instance Eq Glyph
 
 -- | A fact as a dot on the notebook: where it sits, what it looks like,
--- | and its provenance as a native hover tooltip.
+-- | its source event (the radial view's token text), and its provenance
+-- | as a native hover tooltip.
 type FactMark =
   { key :: String
   , x :: Number
   , y :: Number
   , glyph :: Glyph
+  , eref :: String -- "E23" — the event this fact was learned at
   , tip :: String
   }
 
@@ -96,6 +98,7 @@ mkMark count f =
         Lacks _ _ -> GLacks
         InEnvelope _ -> GEnvIn
         NotInEnvelope _ -> GEnvOut
+    , eref: eventRef f.justification.source
     , tip: describeFact f
     }
 

@@ -110,6 +110,35 @@ continuous. Lessons from the doing:
 - dag-smoke grew into a 20-check three-layout suite (morphs, ring
   guides, orbit physics, bullseye distances on a solved game).
 
+## 2¾. The cross-referenced cascade (Andrew, 2026-07-15 — queued)
+
+Three columns on one tab: **packs on the left, the event terminal in
+the centre, orbits on the right** — the two circular views flanking
+the stream they're both derived from, with hover cross-highlighting
+stitching them together:
+
+- hover a possibility bubble (packs) → highlight the orbit tokens of
+  the facts that constrain that (location, card) pair, and the
+  terminal lines of their source events;
+- hover an orbit token → highlight its terminal line (same E-number)
+  and the pack bubbles it killed or confirmed;
+- hover a terminal line → light up everything that event taught.
+
+Joins are already in the data: orbit token ↔ event by
+`justification.source`; fact ↔ bubble by claim (player/card or
+envelope/card); event ↔ facts via the cascade frames. Mechanics:
+CascadeHost already isolates one sim + RAF loop — this wants either
+two hosts side by side (packs host + orbits host) with the parent
+carrying a shared `highlight :: Maybe HoverKey` passed down as input,
+or one host owning both sims. Two sims alive at once is new but each
+is small (147 and ≤147 nodes). Hover events ride the existing
+HS-listener bridge — HATS `withBehaviors` already provides
+`onMouseEnter`/`onMouseLeave` (verified 2026-07-15), so no upstream
+ask is needed.
+
+E-number tokens (2026-07-15) were step one of this: the orbit view
+now speaks the terminal's vocabulary.
+
 ## 3. The worlds canvas (Methods tab centrepiece)
 
 From the collapsing-worlds illustration (`smt/worlds_mock.py`): animate

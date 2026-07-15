@@ -53,6 +53,7 @@ redraw { game, position, wiring, layout, radialPos, anim, onBar } = renderScene
   , dagOpacity: skylineAmount * 0.85
   , rings: Radial.ringGuides maxDepth
   , ringsOpacity: radialAmount * 0.85
+  , tokens: radialAmount
   , rail: eventLabel position (currentEvent game position)
   , verdict: verdictFor game position
   , strip: stripFor game position

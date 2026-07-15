@@ -13,6 +13,7 @@ import Prelude
 
 import Data.Array as Array
 import Data.Foldable (for_, traverse_)
+import Example.Orbits (runOrbits)
 import Example.Skylines (runSkylines)
 import Data.Int as Int
 import Data.Map as Map
@@ -52,6 +53,7 @@ main = do
     Just "stats" -> runStats (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
     Just "corpus" -> runCorpus (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
     Just "skylines" -> runSkylines
+    Just "orbits" -> runOrbits
     _ -> run count movement seedInt
 
 run :: PlayerCount -> Boolean -> Int -> Effect Unit
