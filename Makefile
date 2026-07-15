@@ -5,7 +5,7 @@
 # is the manual fallback when the router isn't running.
 PORT ?= 3026
 
-.PHONY: help bootstrap build test example skylines orbits worlds bundle serve clean
+.PHONY: help bootstrap build test example skylines orbits worlds bettor bettor-validate bundle serve clean
 
 help:
 	@echo "kibitzer targets:"
@@ -16,6 +16,8 @@ help:
 	@echo "  skylines   regenerate frontend/public/skylines.html (small multiples)"
 	@echo "  orbits     regenerate frontend/public/orbits.html (radial small multiples)"
 	@echo "  worlds     regenerate the Z3 model-space pages (worlds.html, worlds-gap.html)"
+	@echo "  bettor     regenerate frontend/public/bettor.html (the EV watcher-watcher; SEED=n)"
+	@echo "  bettor-validate  silent-run the bettor over 200 games (slow; feeds the page's table)"
 	@echo "  bundle     bundle the frontend to frontend/public/bundle.js"
 	@echo "  serve      serve the frontend on http://localhost:$(PORT)"
 	@echo "  clean      remove build output"
@@ -48,6 +50,20 @@ worlds:
 	smt/.venv/bin/python smt/worlds_trace.py smt/trace-33.json > frontend/public/worlds.html
 	spago run --quiet -p kibitzer-example -- trace 42 > smt/trace-42.json
 	smt/.venv/bin/python smt/worlds_trace.py smt/trace-42.json > frontend/public/worlds-gap.html
+
+# The bettor page (EV over proof). BETTOR_SEED picks the featured game;
+# smt/bettor-validation.jsonl (from bettor-validate) feeds the calibration
+# table when present.
+BETTOR_SEED ?= 33
+bettor:
+	spago run --quiet -p kibitzer-example -- trace $(BETTOR_SEED) --players 6 > smt/trace-$(BETTOR_SEED).json
+	smt/.venv/bin/python smt/bettor.py smt/trace-$(BETTOR_SEED).json \
+		$(if $(wildcard smt/bettor-validation.jsonl),--validation smt/bettor-validation.jsonl) \
+		> frontend/public/bettor.html
+
+bettor-validate:
+	spago run --quiet -p kibitzer-example -- traces 200 --players 6 > smt/traces-6p.jsonl
+	smt/.venv/bin/python smt/bettor.py --validate smt/traces-6p.jsonl > smt/bettor-validation.jsonl
 
 bundle:
 	spago bundle -p kibitzer-frontend

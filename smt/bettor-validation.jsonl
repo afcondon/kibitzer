@@ -1,0 +1,10 @@
+{"seed": 1, "players": 6, "total": 136, "p0": 75, "nWorlds": 1116, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 2, "players": 6, "total": 119, "p0": 66, "nWorlds": 1104, "proofAt": 118, "engineSolvedAt": 118, "bet": {"at": 116, "pTop": 0.5, "hazard": 1.0, "triple": [3, 6, 13], "correct": false}}
+{"seed": 3, "players": 6, "total": 149, "p0": 74, "nWorlds": 725, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 133, "pTop": 0.5, "hazard": 1.0, "triple": [4, 6, 18], "correct": false}}
+{"seed": 4, "players": 6, "total": 91, "p0": 79, "nWorlds": 1056, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 89, "pTop": 0.6842, "hazard": 0.8421, "triple": [5, 6, 18], "correct": false}}
+{"seed": 5, "players": 6, "total": 130, "p0": 65, "nWorlds": 648, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 103, "pTop": 0.5, "hazard": 0.6667, "triple": [0, 6, 19], "correct": false}}
+{"seed": 6, "players": 6, "total": 117, "p0": 84, "nWorlds": 1364, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 7, "players": 6, "total": 177, "p0": 73, "nWorlds": 258, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 115, "pTop": 0.5714, "hazard": 0.7143, "triple": [2, 6, 12], "correct": false}}
+{"seed": 8, "players": 6, "total": 90, "p0": 73, "nWorlds": 144, "proofAt": 87, "engineSolvedAt": 87, "bet": {"at": 86, "pTop": 0.5, "hazard": 1.0, "triple": [3, 6, 16], "correct": true}}
+{"seed": 9, "players": 6, "total": 63, "p0": 57, "nWorlds": 1346, "proofAt": 62, "engineSolvedAt": 62, "bet": {"at": 57, "pTop": 0.6686, "hazard": 0.6924, "triple": [4, 6, 12], "correct": true}}
+{"seed": 10, "players": 6, "total": 99, "p0": 69, "nWorlds": 775, "proofAt": null, "engineSolvedAt": null, "bet": null}

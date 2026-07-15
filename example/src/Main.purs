@@ -58,6 +58,10 @@ main = do
       (fromMaybe 42 (Int.fromString =<< Array.index rest 1))
       count
       movement
+    Just "traces" -> runTraces
+      (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
+      count
+      movement
     _ -> run count movement seedInt
 
 run :: PlayerCount -> Boolean -> Int -> Effect Unit
@@ -175,21 +179,17 @@ rowFor count movement n = Array.foldl accumulate empty (Array.range 1 n)
 -- | for the completeness-gap marker. Only watcher-visible information —
 -- | the solution rides along solely for the page's ground-truth caption.
 runTrace :: Int -> PlayerCount -> Boolean -> Effect Unit
-runTrace seedInt count movement = do
-  let
-    result = simulate
-      { playerCount: count
-      , seed: mkSeed seedInt
-      , policy: randomLegalPolicy
-      , maxTurns: 600
-      , movement
-      }
-    snapshots = knowledgeTimeline count Watcher result.log
-    solvedAt = Array.findIndex (isJust <<< solutionIfKnown) snapshots
-    players = allPlayers count
-    cardIx c = fromMaybe (-1) (Array.elemIndex c allCards)
-    ixSet s = jArr (map (show <<< cardIx) (Set.toUnfoldable s))
-  log $ jObj
+runTrace seedInt count movement = log (traceJson seedInt count movement)
+
+-- | The batch form: one trace object per line for seeds 1..n — the
+-- | corpus the bettor validation run (smt/bettor.py --validate) chews.
+runTraces :: Int -> PlayerCount -> Boolean -> Effect Unit
+runTraces n count movement =
+  for_ (Array.range 1 n) \seedInt -> log (traceJson seedInt count movement)
+
+traceJson :: Int -> PlayerCount -> Boolean -> String
+traceJson seedInt count movement =
+  jObj
     [ Tuple "seed" (show seedInt)
     , Tuple "players" (show (playerCountToInt count))
     , Tuple "movement" (if movement then "true" else "false")
@@ -209,6 +209,24 @@ runTrace seedInt count movement = do
     , Tuple "events" (jArr (map traceEvent result.log))
     ]
   where
+  result = simulate
+    { playerCount: count
+    , seed: mkSeed seedInt
+    , policy: randomLegalPolicy
+    , maxTurns: 600
+    , movement
+    }
+
+  snapshots = knowledgeTimeline count Watcher result.log
+
+  solvedAt = Array.findIndex (isJust <<< solutionIfKnown) snapshots
+
+  players = allPlayers count
+
+  cardIx c = fromMaybe (-1) (Array.elemIndex c allCards)
+
+  ixSet s = jArr (map (show <<< cardIx) (Set.toUnfoldable s))
+
   traceEvent e = jObj
     [ Tuple "label" (jStr (watcherLabel e))
     , Tuple "constraint" (constraintJson e)
@@ -232,9 +250,10 @@ runTrace seedInt count movement = do
       , Tuple "player" (show p)
       , Tuple "cards" (ixCards suggestion)
       ]
-    CardShown { by: PlayerId b, suggestion } -> jObj
+    CardShown { by: PlayerId b, to: PlayerId t, suggestion } -> jObj
       [ Tuple "type" (jStr "show")
       , Tuple "player" (show b)
+      , Tuple "to" (show t)
       , Tuple "cards" (ixCards suggestion)
       ]
     _ -> "null"
