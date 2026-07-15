@@ -152,7 +152,24 @@ ask is needed.
 E-number tokens (2026-07-15) were step one of this: the orbit view
 now speaks the terminal's vocabulary.
 
-## 3. The worlds canvas (Methods tab centrepiece)
+## 3. The worlds canvas (Methods tab centrepiece) — DONE 2026-07-15
+
+Built as two static pages (make worlds): worlds.html (seed 33/6p, the
+1,238-world collapse to a solved view) and worlds-gap.html (seed 42/4p,
+the completeness gap: certainty dots fill when the space agrees on a
+column, gain an ink ring when the notebook knows it too — the game ends
+five dots, four rings, Ballroom naked). Design notes vs the plan below:
+worlds_trace.py replaced the imagined worlds_trace recipe — Z3 only
+enumerates once (binary-searched first position under the cap); replay
+is pure evaluation, and the optimal solve moment falls out of the
+replay (all survivors agree on the envelope) with no per-position
+solver probes. Finding: on ten 6p seeds probed the engine's envelope
+timing equals the optimum — the gap lives in the hand cards, hence the
+per-column rings. The pedagogical-seed hunt (optimal strictly earlier
+than engine on the envelope) found nothing at 6p; if one is ever
+wanted, probe more seeds with the same script.
+
+### Original design (as sketched)
 
 From the collapsing-worlds illustration (`smt/worlds_mock.py`): animate
 the full collapse — up to ~1500 rows × 21 columns of tiny dots —

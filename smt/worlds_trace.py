@@ -170,6 +170,8 @@ def render_page(data):
         .replace("__SEED__", str(data["seed"]))
         .replace("__PLAYERS__", str(n))
         .replace("__CAP__", str(data["cap"]))
+        .replace("__P0E__", "E" + str(data["p0"] - 1))
+        .replace("__NWORLDS__", f"{len(data['worlds']):,}")
     )
 
 
@@ -214,11 +216,13 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
 <h1>The model space</h1>
 <p class="intro">Seed __SEED__, __PLAYERS__ players. Every row is one complete world —
 an assignment of all 21 cards to hands and envelope — consistent with the public
-transcript; every column is a card, coloured by where that world puts it. Z3
-enumerated the space at the first moment it fits on a screen (&le; __CAP__ worlds);
-each event then kills the worlds it contradicts. When a column goes monochrome,
-that card's place is certain; when the three red columns agree, the space itself
-has solved the murder — <em>before</em> the watcher's notebook catches up.</p>
+transcript; every column is a card, coloured by where that world puts it. Before
+__P0E__ the space is astronomically large, so the page begins at the first event
+after which <em>every</em> consistent world fits on one page — all __NWORLDS__ of
+them, the totality, not a sample. Each further event kills the worlds it
+contradicts. When a column goes monochrome, that card's place is certain — it gets
+a dot, and an ink ring once the watcher's notebook knows it too. When the three
+red columns agree, the space itself has solved the murder.</p>
 <div class="stage">
   <div class="collabels" id="collabels"></div>
   <div class="certs" id="certs"></div>
@@ -240,7 +244,9 @@ has solved the murder — <em>before</em> the watcher's notebook catches up.</p>
 </div>
 <script>
 const D = __DATA__;
-const PLAYER_COLOURS = ["#4a6fa5","#b8863b","#5d9b77","#7d6bb0","#b05d7d","#5db0a8"];
+// players in pastel so the envelope red is the only loud colour on
+// the field — late in the collapse the eye keys on red + the dots
+const PLAYER_COLOURS = ["#aabfd8","#dbc79c","#abc9b5","#c3b6da","#d8abbc","#abd2ce"];
 const ENV_COLOUR = "#d92b2b";
 const colour = loc => loc === D.players ? ENV_COLOUR : PLAYER_COLOURS[loc];
 const W = D.worlds.length;
@@ -277,10 +283,10 @@ legend.appendChild(es);
 
 const markers = document.getElementById("markers");
 function addMarker(pos, text, col) {
-  if (pos == null) return;
+  if (pos == null || text == null) return;
   const d = document.createElement("div");
   d.className = "mk"; d.style.color = col;
-  d.style.left = (100 * pos / D.total) + "%";
+  d.style.left = (100 * (pos - D.p0) / (D.total - D.p0)) + "%";
   d.textContent = text;
   markers.appendChild(d);
 }
@@ -307,7 +313,7 @@ if (D.optimalSolvedAt != null && D.optimalSolvedAt === D.engineSolvedAt) {
 // ---- canvas
 const cv = document.getElementById("cv");
 const ctx = cv.getContext("2d");
-const CSS_H = 620;
+const CSS_H = Math.min(1100, Math.max(620, Math.round(W * 0.85)));
 function sizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
   cv.width = cv.clientWidth * dpr;
@@ -348,24 +354,21 @@ function updateChrome(alive) {
     if (loc >= 0) {
       dot.style.background = colour(loc); dot.style.opacity = 1;
       dot.classList.toggle("known", known);
-      if (!known && position >= D.p0) gap++;
+      if (!known) gap++;
     } else {
       dot.style.opacity = 0; dot.classList.remove("known");
     }
   }
   document.getElementById("gapline").textContent =
     gap > 0 ? `${gap} card${gap > 1 ? "s" : ""} the space knows and the notebook doesn't` : "";
-  const over = position < D.p0;
-  document.getElementById("count").textContent = over
-    ? `more than ${D.cap.toLocaleString()} worlds remain (showing the ${W.toLocaleString()} that fit)`
-    : `${alive.length.toLocaleString()} worlds remain`;
+  document.getElementById("count").textContent =
+    `${alive.length.toLocaleString()} worlds remain`;
   document.getElementById("evline").textContent =
-    position === 0 ? "Before the deal — every assignment is possible."
-                   : `E${position-1} · ${D.labels[position-1]}`;
+    `E${position-1} · ${D.labels[position-1]}`;
   const v = document.getElementById("verdict");
   v.textContent = (D.optimalSolvedAt != null && position >= D.optimalSolvedAt)
     ? "the space has pinned the envelope" : "";
-  document.getElementById("pos").textContent = `${position} / ${D.total}`;
+  document.getElementById("pos").textContent = `E${position-1} / E${D.total-1}`;
   document.getElementById("scrub").value = position;
 }
 
@@ -407,9 +410,10 @@ function draw(snap) {
 
 // ---- transport
 const scrub = document.getElementById("scrub");
+scrub.min = D.p0;
 scrub.max = D.total;
-function goTo(p) { position = Math.max(0, Math.min(D.total, p)); retarget(); }
-document.getElementById("b0").onclick = () => { stop(); goTo(0); };
+function goTo(p) { position = Math.max(D.p0, Math.min(D.total, p)); retarget(); }
+document.getElementById("b0").onclick = () => { stop(); goTo(D.p0); };
 document.getElementById("bb").onclick = () => { stop(); goTo(position - 1); };
 document.getElementById("bf").onclick = () => { stop(); goTo(position + 1); };
 document.getElementById("be").onclick = () => { stop(); goTo(D.total); };
@@ -420,12 +424,12 @@ const bp = document.getElementById("bp");
 function stop() { if (player) { clearInterval(player); player = null; bp.textContent = "▶"; } }
 bp.onclick = () => {
   if (player) { stop(); return; }
-  if (position >= D.total) goTo(0);
+  if (position >= D.total) goTo(D.p0);
   bp.textContent = "⏸";
   player = setInterval(() => {
     // skip straight to the next informative event so the collapse keeps pace
     let next = position + 1;
-    while (next < D.total && !D.informative[next - 1] && next > D.p0) next++;
+    while (next < D.total && !D.informative[next - 1]) next++;
     goTo(next);
     if (position >= D.total) stop();
   }, 950);
