@@ -17,20 +17,20 @@
             opacity: 0; transition: opacity .4s, box-shadow .4s; }
  .certs i.known { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink); }
  canvas { width: 100%; display: block; border: 1px solid var(--hairline); }
- .rail { display: flex; gap: 1.25rem; align-items: baseline; margin-top: .6rem;
+ .rail { display: flex; gap: 1.25rem; align-items: baseline;
          font-size: .85rem; min-height: 1.4rem; }
  .rail .count { font-variant-numeric: tabular-nums; color: var(--muted); }
  .rail .verdict { color: var(--accent); font-weight: 600; }
  .rail .gap { color: var(--accent); font-size: .78rem; }
- .controls { display: flex; gap: .75rem; align-items: center; margin-top: .6rem; }
+ .controls { display: flex; gap: .75rem; align-items: center; margin-top: .35rem; }
  .controls button { font: inherit; font-size: .9rem; padding: .2rem .7rem;
                     border: 1px solid var(--ink); background: #fff; cursor: pointer; }
  .controls button:hover { background: var(--ink); color: #fff; }
  .controls input[type=range] { flex: 1; accent-color: var(--accent); }
- .markers { position: relative; height: 3.6rem; margin-top: .2rem; font-size: .72rem; }
- .markers .mk { position: absolute; transform: translateX(-50%); text-align: center; }
- .markers .mk::before { content: ""; display: block; width: 1px; height: .8rem;
-                        margin: 0 auto .15rem; background: currentColor; }
+ .top { position: sticky; top: 0; z-index: 5; background: #fff;
+        padding: .4rem 0 .5rem; border-bottom: 1px solid var(--hairline); }
+ #chart { display: block; width: 100%; height: 96px; margin-top: .4rem;
+          cursor: crosshair; }
  .legend { display: flex; gap: 1rem; margin-top: .9rem; font-size: .75rem;
            color: var(--muted); flex-wrap: wrap; }
  .legend i { display: inline-block; width: 10px; height: 10px; margin-right: .3rem;
@@ -47,22 +47,24 @@ contradicts. When a column goes monochrome, that card's place is certain — it 
 a dot, and an ink ring once the watcher's notebook knows it too. When the three
 red columns agree, the space itself has solved the murder.</p>
 <div class="stage">
+  <div class="top">
+    <div class="rail">
+      <span id="evline">—</span>
+      <span class="count" id="count"></span>
+      <span class="verdict" id="verdict"></span>
+      <span class="gap" id="gapline"></span>
+    </div>
+    <div class="controls">
+      <button id="b0">⏮</button><button id="bb">◀</button>
+      <button id="bp">▶</button><button id="bf">▶▶</button><button id="be">⏭</button>
+      <input type="range" id="scrub" min="0" step="1">
+      <span class="count" id="pos"></span>
+    </div>
+    <svg id="chart"></svg>
+  </div>
   <div class="collabels" id="collabels"></div>
   <div class="certs" id="certs"></div>
   <canvas id="cv"></canvas>
-  <div class="rail">
-    <span id="evline">—</span>
-    <span class="count" id="count"></span>
-    <span class="verdict" id="verdict"></span>
-    <span class="gap" id="gapline"></span>
-  </div>
-  <div class="controls">
-    <button id="b0">⏮</button><button id="bb">◀</button>
-    <button id="bp">▶</button><button id="bf">▶▶</button><button id="be">⏭</button>
-    <input type="range" id="scrub" min="0" step="1">
-    <span class="count" id="pos"></span>
-  </div>
-  <div class="markers" id="markers"></div>
   <div class="legend" id="legend"></div>
 </div>
 <script>
@@ -104,34 +106,75 @@ const es = document.createElement("span");
 es.innerHTML = `<i style="background:${ENV_COLOUR}"></i>in the envelope`;
 legend.appendChild(es);
 
-const markers = document.getElementById("markers");
-function addMarker(pos, text, col) {
-  if (pos == null || text == null) return;
-  const d = document.createElement("div");
-  d.className = "mk"; d.style.color = col;
-  d.style.left = (100 * (pos - D.p0) / (D.total - D.p0)) + "%";
-  d.textContent = text;
-  markers.appendChild(d);
+// ---- the collapse curve: worlds alive per position, on log paper.
+// The solve markers live here; clicking anywhere on it scrubs.
+const counts = [];
+for (let p = D.p0; p <= D.total; p++) {
+  let n = 0;
+  for (let i = 0; i < W; i++) if (dieAt[i] > p) n++;
+  counts.push(n);
+}
+const chart = document.getElementById("chart");
+const NS = "http://www.w3.org/2000/svg";
+const CW = 860, CHH = 96, PADL = 34, PADR = 10, PADT = 16, PADB = 6;
+chart.setAttribute("viewBox", `0 0 ${CW} ${CHH}`);
+chart.setAttribute("preserveAspectRatio", "none");
+const xOf = p => PADL + (CW - PADL - PADR) * (p - D.p0) / (D.total - D.p0);
+const maxLog = Math.log10(counts[0]);
+const yOf = n => PADT + (CHH - PADT - PADB) * (1 - Math.log10(Math.max(n, 1)) / maxLog);
+function svgEl(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  chart.appendChild(e); return e;
+}
+// decade gridlines — the log paper
+for (let k = 0; Math.pow(10, k) <= counts[0]; k++) {
+  const y = yOf(Math.pow(10, k));
+  svgEl("line", { x1: PADL, y1: y, x2: CW - PADR, y2: y,
+                  stroke: "#e6e6e6", "stroke-width": 1 });
+  svgEl("text", { x: PADL - 5, y: y + 3, "text-anchor": "end",
+                  "font-size": 9, fill: "#767676" }, Math.pow(10, k).toLocaleString());
+}
+// the curve, step-after
+let d = `M ${xOf(D.p0)} ${yOf(counts[0])}`;
+for (let p = D.p0 + 1; p <= D.total; p++)
+  d += ` H ${xOf(p)} V ${yOf(counts[p - D.p0])}`;
+svgEl("path", { d, fill: "none", stroke: "#141414", "stroke-width": 1.4 });
+// solve markers
+function chartMarker(pos, label, col) {
+  if (pos == null) return;
+  const x = xOf(pos);
+  svgEl("line", { x1: x, y1: PADT - 4, x2: x, y2: CHH - PADB,
+                  stroke: col, "stroke-width": 1, "stroke-dasharray": "3 3" });
+  svgEl("text", { x: Math.min(x, CW - 150), y: 9, "font-size": 9, fill: col,
+                  "text-anchor": x > CW - 160 ? "end" : "start" }, label);
 }
 if (D.optimalSolvedAt != null && D.optimalSolvedAt === D.engineSolvedAt) {
-  addMarker(D.optimalSolvedAt, "space and notebook agree (E" + (D.optimalSolvedAt-1) + ")", ENV_COLOUR);
+  chartMarker(D.optimalSolvedAt, `space and notebook agree · E${D.optimalSolvedAt-1}`, ENV_COLOUR);
 } else {
-  addMarker(D.optimalSolvedAt,
-    D.optimalSolvedAt == null ? null : "the space pins the envelope (E" + (D.optimalSolvedAt-1) + ")",
-    ENV_COLOUR);
-  addMarker(D.engineSolvedAt,
-    D.engineSolvedAt == null ? null : "the notebook catches up (E" + (D.engineSolvedAt-1) + ")",
-    "#141414");
+  if (D.optimalSolvedAt != null)
+    chartMarker(D.optimalSolvedAt, `space pins the envelope · E${D.optimalSolvedAt-1}`, ENV_COLOUR);
+  if (D.engineSolvedAt != null)
+    chartMarker(D.engineSolvedAt, `notebook catches up · E${D.engineSolvedAt-1}`, "#141414");
 }
-// keep labels legible near the right edge and when markers crowd
-[...markers.children].forEach((m, i) => {
-  const pct = parseFloat(m.style.left);
-  if (pct > 86) { m.style.transform = "translateX(-92%)"; }
-  if (i === 1) {
-    const prev = parseFloat(markers.children[0].style.left);
-    if (Math.abs(pct - prev) < 14) m.style.top = "1.5rem";
-  }
-});
+// the cursor: a line and a dot riding the curve
+const curLine = svgEl("line", { y1: PADT - 4, y2: CHH - PADB,
+                                stroke: ENV_COLOUR, "stroke-width": 1.2 });
+const curDot = svgEl("circle", { r: 3, fill: ENV_COLOUR });
+function updateChart() {
+  const x = xOf(position), y = yOf(counts[position - D.p0]);
+  curLine.setAttribute("x1", x); curLine.setAttribute("x2", x);
+  curDot.setAttribute("cx", x); curDot.setAttribute("cy", y);
+}
+// click (or drag) to scrub
+function chartSeek(e) {
+  const r = chart.getBoundingClientRect();
+  const frac = ((e.clientX - r.left) / r.width * CW - PADL) / (CW - PADL - PADR);
+  stop(); goTo(Math.round(D.p0 + frac * (D.total - D.p0)));
+}
+chart.addEventListener("click", chartSeek);
+chart.addEventListener("mousemove", e => { if (e.buttons & 1) chartSeek(e); });
 
 // ---- canvas
 const cv = document.getElementById("cv");
@@ -193,6 +236,7 @@ function updateChrome(alive) {
     ? "the space has pinned the envelope" : "";
   document.getElementById("pos").textContent = `E${position-1} / E${D.total-1}`;
   document.getElementById("scrub").value = position;
+  updateChart();
 }
 
 // ---- draw loop (runs only while something is moving)
