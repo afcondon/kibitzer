@@ -164,12 +164,53 @@ engine's visual language. `explain :: claim -> Either UnsatCore
 DerivationDag` is the API where the correspondence stops being an
 essay and becomes a function.
 
-## Sequencing note
+## Decisions and revisions (same day)
 
-Nothing here changes the rule of three; it sharpens it. The natural
-next *build* steps, in rising ambition: (a) TLC tiny model + rendered
-state graph (days, self-contained, completes a rung); (b) FH-2
-auto-routing spike against z3 via child process — the second SMT
-client in its natural habitat, informing the library API (soft
-constraints!) before any library exists; (c) Lean-1 *after* JTMS
-extraction, so the proofs land on the library.
+- **Scope: the Cluedo demo stops at QuickCheck + SMT** (Andrew).
+  TLA+/Lean remain designs; if ever built, against the extracted
+  library, not the demo.
+- **Harmonia is a JTMS client, not an SMT client** (Andrew's hunch,
+  sharpened): music *analysis* is monotone deduction — facts about a
+  score/stream derived by named rules with premises. Three concrete
+  shapes:
+  1. **Explainable scale/key inference from a note stream** — this is
+     kibitzer-isomorphic: notes arriving = events, candidate
+     scales/keys = worlds, each note eliminates candidates
+     (Lacks-shaped), ambiguity is a live disjunction ("A minor or
+     C major") that later notes resolve, and provenance answers "why
+     does the quantiser think we're in D dorian." An explainable,
+     incremental quantiser brain for Harmonia/the Dáil work.
+  2. **Counterpoint/voice-leading linting with provenance** — rules as
+     data ("parallel fifths, S against B, bar 3, because…"), species
+     counterpoint as the canonical declarative rule set; testable,
+     user-extensible at the eDSL level.
+  3. Analysis facts generally (common tones, suspensions, cadence
+     identification) accreting monotonically over a score.
+  The executable stays small and fast because it is saturation, not
+  search — monotone unit propagation is real-time-friendly (the live
+  rig could run it against the MIDI stream). Where *search* is truly
+  needed (choose the best voicing), generate-and-test with the JTMS
+  as judge — or the SMT sibling, offline. The division of labour is
+  the ⊢/⊨ split again: JTMS explains and validates fast; SMT searches
+  and optimizes.
+- **Rule of three, both libraries, now satisfied on paper**:
+  JTMS — kibitzer, ShapedSteer, Harmonia.
+  SMT — kibitzer, ShapedSteer, FH-2 auto-routing (plus possibly a
+  second contrived puzzle example; Andrew is open to one).
+- Next build steps, revised: (a) FH-2 auto-routing spike against z3
+  (second SMT client in its habitat; prices Optimize/MaxSMT); (b) a
+  Harmonia scale-inference spike using kibitzer's saturation pattern
+  by hand (second JTMS client; prices the kernel API); extraction
+  when either spike starts wanting the shared kernel.
+
+## The halfway house (Andrew, on Curry-Howard)
+
+The Cluedo program sits between types and proofs, and that middle rung
+has a name worth keeping: **proof-carrying data, testably sound**. The
+fact records are proof terms — but checked dynamically (QuickCheck
+properties + the SMT oracle audit) rather than statically (a kernel).
+More than types: every fact carries its evidence and can be asked
+"why". Less than Lean: the evidence is audited, not machine-checked.
+The observatory is then a *proof renderer* — orbits draw ⊢, worlds
+draw ⊨ — which is what makes the thing a tool for thought rather than
+just a demo: the artifacts you manipulate on screen are arguments.

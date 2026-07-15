@@ -1,7 +1,13 @@
 # Follow-on plan: the same guarantees by other means — SMT, TLA+, Lean
 
-*Status: SMT experiment **done** (results below, 2026-07-13); TLA+ and
-Lean still planned.*
+*Status: SMT experiment **done** (results below, 2026-07-13).
+**Scope decision (Andrew, 2026-07-15): the Cluedo demo stops at
+QuickCheck + SMT.** That pairing is real-world-shaped and complete as
+a story (sampled properties + a per-game decision procedure + the
+worlds pages). The TLA+ and Lean sections below are kept as designs —
+if either is ever built, it should be against the extracted JTMS
+library, not this demo (see docs/smt-jtms-brainstorm.md), so the
+proofs land where every client inherits them.*
 
 ## SMT results, round 2: the gap closed (and a theorem earned its keep)
 
