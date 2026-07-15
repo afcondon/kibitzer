@@ -51,10 +51,12 @@ worlds:
 	spago run --quiet -p kibitzer-example -- trace 42 > smt/trace-42.json
 	smt/.venv/bin/python smt/worlds_trace.py smt/trace-42.json > frontend/public/worlds-gap.html
 
-# The bettor page (EV over proof). BETTOR_SEED picks the featured game;
-# smt/bettor-validation.jsonl (from bettor-validate) feeds the calibration
-# table when present.
-BETTOR_SEED ?= 33
+# The bettor page (EV over proof). BETTOR_SEED picks the featured game —
+# 11 is the corpus's best genuine call (wakes at 82% into an 82% hazard,
+# bets immediately, correct, nine events before proof); 33 is the honest
+# bore (no earlier call existed). smt/bettor-validation.jsonl (from
+# bettor-validate) feeds the calibration table when present.
+BETTOR_SEED ?= 11
 bettor:
 	spago run --quiet -p kibitzer-example -- trace $(BETTOR_SEED) --players 6 > smt/trace-$(BETTOR_SEED).json
 	smt/.venv/bin/python smt/bettor.py smt/trace-$(BETTOR_SEED).json \
@@ -63,7 +65,7 @@ bettor:
 
 bettor-validate:
 	spago run --quiet -p kibitzer-example -- traces 200 --players 6 > smt/traces-6p.jsonl
-	smt/.venv/bin/python smt/bettor.py --validate smt/traces-6p.jsonl > smt/bettor-validation.jsonl
+	smt/.venv/bin/python smt/bettor.py --validate smt/traces-6p.jsonl --jobs 6 > smt/bettor-validation.jsonl
 
 bundle:
 	spago bundle -p kibitzer-frontend

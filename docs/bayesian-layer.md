@@ -5,11 +5,28 @@ there are times we'd be happy to guess before either SMT or the
 deductive framework delivers certainty — the Jane St solution, EV
 rather than proof. Plan for a probabilistic add-on to the demo.*
 
-**Status: SOMEDAY (Andrew, same day).** With toy players the
-behavioral layer isn't really modelling anything — the players *are*
-the policy model, so it's self-referential. Merit as a worked example
-of the triptych's third panel, but not convincing as inference. Filed,
-not scheduled.
+**Status, revised same day: THE BETTOR IS BUILT.** Andrew's verdicts:
+Stage C (behavioral likelihoods) is SOMEDAY — with toy players the
+policy layer isn't modelling anything, it's self-referential. But the
+EV slice survived scrutiny (see the decomposition below), and Andrew
+called the build: a probabilistic **Watcher-Watcher** that makes a
+call when the EV looks good ("we don't have to actually beat a
+market"), as a demo page plus a silent-run validation over a corpus
+of games. Landed as `smt/bettor.py` → `frontend/public/bettor.html`
+(`make bettor`, `make bettor-validate`).
+
+**What the build taught us (deviation from the plan below):** the
+hazard needs NO engine replays. A rival's certainty can be measured
+*semantically* over the same enumeration — rival R is certain in
+world w iff every surviving world consistent with R's view (R's exact
+hand in w, plus the cards shown to R, canonically resolved in w)
+agrees on the envelope. Matching worlds necessarily share R's hand,
+so all scans live inside same-hand groups: the whole computation is
+counting, cheap, in `worlds_trace.py`'s replay loop. It models a
+⊨-strong rival — an upper bound on any real one, and (per the ten-
+seed probe) a tight one. Seed 33's chart promptly exhibited the
+player-side completeness gap: hazard sits at 0.5 (semantically-
+certain rivals) for ~40 events before the actual ⊢-rival wins.
 
 **The EV question, answered honestly (same conversation):** is the EV
 calculation itself possible without a better player model? Mostly no —
@@ -87,6 +104,24 @@ the 2-world position is already a coin flip between two triples — if
 they differ only in one card, P(top) may be high much earlier. Worth
 measuring across the ten probed seeds: the θ-crossing vs proof-moment
 gap is the whole pitch, and we don't yet know how big it is.
+
+**MEASURED (2026-07-15, 200-game silent run, 6p classic, seeds
+1–200):** 122 bets, 72 correct, 78 abstains; aggregate calibration
+honest (expected 77.5 ± 4.9 wins, got 72, z = −1.1). The surprise:
+**none of the 19 confident bets (P ≥ 0.9) preceded proof** — the
+posterior in this game does not climb, it *snaps* (constraints kill
+triples in blocks). The entire real edge is the forced clause: 103
+priced coin flips, mean stated 57%, realised 51%, mean lead 4 events,
+best 27. EV over proof literally means: not foresight — knowing when
+the race is lost and taking the odds instead of nothing. Consequence
+for the stages below: Stage B (pre-p0 posteriors) is pointless for
+confident betting — the posterior is flat even *after* p0 — and only
+Stage C (behavioral likelihoods, SOMEDAY) could change that, because
+hard constraints are exactly what can't produce a gradient. Featured
+seed: 11 (wakes at 82% into an 82% hazard, bets immediately, correct,
+nine events before proof). Also visible on seed 33's chart: hazard
+plateaus at 0.5 for ~40 events before the deductive winner moves —
+the completeness gap on the player side.
 
 Viz: a P(top hypothesis) line on the existing log chart (second
 y-axis, 0–1), with θ-crossings marked the same way solve moments are;

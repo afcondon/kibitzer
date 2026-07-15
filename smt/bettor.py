@@ -188,35 +188,40 @@ def bettor_series(trace, cap, log=lambda *_: None):
 # ---------------------------------------------------------------------------
 # validate mode: run the bettor silently over a corpus of traces
 
-def validate(path, cap):
+def _validate_one(job):
+    line, cap = job
+    trace = json.loads(line)
+    r = bettor_series(trace, cap)
+    row = {
+        "seed": trace["seed"],
+        "players": trace["players"],
+        "total": len(trace["events"]),
+    }
+    if r is None:
+        row.update({"p0": None, "proofAt": None,
+                    "engineSolvedAt": trace["engineSolvedAt"], "bet": None})
+    else:
+        row.update({k: r[k] for k in
+                    ("p0", "nWorlds", "proofAt", "engineSolvedAt", "bet")})
+    return row
+
+
+def validate(path, cap, jobs):
+    import multiprocessing as mp
+    lines = [l.strip() for l in open(path) if l.strip()]
     results = []
-    for line in open(path):
-        line = line.strip()
-        if not line:
-            continue
-        trace = json.loads(line)
-        r = bettor_series(trace, cap)
-        row = {
-            "seed": trace["seed"],
-            "players": trace["players"],
-            "total": len(trace["events"]),
-        }
-        if r is None:
-            row.update({"p0": None, "proofAt": None,
-                        "engineSolvedAt": trace["engineSolvedAt"], "bet": None})
-        else:
-            row.update({k: r[k] for k in
-                        ("p0", "nWorlds", "proofAt", "engineSolvedAt", "bet")})
-        results.append(row)
-        b = row["bet"]
-        print(f"seed {row['seed']}: " + (
-            f"bet@{b['at']} P={b['pTop']} hz={b['hazard']} "
-            f"{'CORRECT' if b['correct'] else 'WRONG'} "
-            f"(proof@{row['proofAt']}, engine@{row['engineSolvedAt']}, end {row['total']})"
-            if b else
-            f"abstains (p0={row.get('p0')}, proof@{row.get('proofAt')}, end {row['total']})"
-        ), file=sys.stderr)
-        print(json.dumps(row), flush=True)
+    with mp.get_context("spawn").Pool(jobs) as pool:
+        for row in pool.imap(_validate_one, [(l, cap) for l in lines]):
+            results.append(row)
+            b = row["bet"]
+            print(f"seed {row['seed']}: " + (
+                f"bet@{b['at']} P={b['pTop']} hz={b['hazard']} "
+                f"{'CORRECT' if b['correct'] else 'WRONG'} "
+                f"(proof@{row['proofAt']}, engine@{row['engineSolvedAt']}, end {row['total']})"
+                if b else
+                f"abstains (p0={row.get('p0')}, proof@{row.get('proofAt')}, end {row['total']})"
+            ), file=sys.stderr)
+            print(json.dumps(row), flush=True)
     summarize(results, sys.stderr)
 
 
@@ -258,11 +263,21 @@ def validation_summary(path):
     for r in bets:
         b = min(9, int(r["bet"]["pTop"] * 10))
         buckets.setdefault(b, []).append(r["bet"]["correct"])
+    confident = [r for r in bets if r["bet"]["pTop"] >= THETA]
+    forced = [r for r in bets if r["bet"]["pTop"] < THETA]
     return {
         "games": len(results),
         "bets": len(bets),
         "correct": correct,
         "abstains": len(results) - len(bets),
+        "confident": len(confident),
+        "confidentEarly": sum(1 for r in confident
+                              if r["proofAt"] is not None
+                              and r["proofAt"] - r["bet"]["at"] > 0),
+        "forced": len(forced),
+        "forcedCorrect": sum(1 for r in forced if r["bet"]["correct"]),
+        "forcedMeanP": round(sum(r["bet"]["pTop"] for r in forced) / len(forced), 3)
+                       if forced else None,
         "meanLeadProof": round(sum(leads_proof) / len(leads_proof), 1) if leads_proof else None,
         "maxLeadProof": max(leads_proof) if leads_proof else None,
         "meanLeadEngine": round(sum(leads_engine) / len(leads_engine), 1) if leads_engine else None,
@@ -283,10 +298,11 @@ def main():
     ap.add_argument("--cap", type=int, default=1500)
     ap.add_argument("--validate", help="traces JSONL: run the corpus, emit results JSONL")
     ap.add_argument("--validation", help="results JSONL from a prior --validate run, for the page")
+    ap.add_argument("--jobs", type=int, default=6, help="parallel workers for --validate")
     args = ap.parse_args()
 
     if args.validate:
-        validate(args.validate, args.cap)
+        validate(args.validate, args.cap, args.jobs)
         return
 
     trace = json.load(open(args.trace))
@@ -482,10 +498,13 @@ function markers(c, yTop, yBot) {
                   stroke: "#141414", "stroke-width": 0.7, "stroke-dasharray": "5,4" });
   const path = key => D.series.map((s, i) =>
     (i ? "L" : "M") + c.x(s.pos).toFixed(1) + " " + y(s[key]).toFixed(1)).join(" ");
-  c.add("path", { d: path("hazard"), fill: "none", stroke: "#d92b2b", "stroke-width": 1.6 });
   c.add("path", { d: path("pTop"), fill: "none", stroke: "#1f6f43", "stroke-width": 2 });
+  // dashed so it stays visible where it rides exactly on the confidence line
+  c.add("path", { d: path("hazard"), fill: "none", stroke: "#d92b2b",
+                  "stroke-width": 1.6, "stroke-dasharray": "6,4" });
   markers(c, c.pad.t, c.h - c.pad.b);
-  for (const s of D.series) if (s.pos % 10 === 0 || s.pos === D.total)
+  const step = Math.max(1, Math.round((D.total - D.p0) / 10));
+  for (const s of D.series) if ((s.pos - D.p0) % step === 0 || s.pos === D.total)
     c.add("text", { x: c.x(s.pos), y: c.h - 4, "font-size": 9, fill: "#767676",
                     "text-anchor": "middle" }, E(s.pos));
 }
@@ -507,6 +526,10 @@ function markers(c, yTop, yBot) {
     (i ? "L" : "M") + c.x(s.pos).toFixed(1) + " " + y(s.count).toFixed(1)).join(" ");
   c.add("path", { d, fill: "none", stroke: "#767676", "stroke-width": 1.6 });
   markers(c, c.pad.t, c.h - c.pad.b);
+  const step = Math.max(1, Math.round((D.total - D.p0) / 10));
+  for (const s of D.series) if ((s.pos - D.p0) % step === 0 || s.pos === D.total)
+    c.add("text", { x: c.x(s.pos), y: c.h - 4, "font-size": 9, fill: "#767676",
+                    "text-anchor": "middle" }, E(s.pos));
 }
 
 // ---- validation table
@@ -535,6 +558,18 @@ if (D.validation) {
     `<p class="body">Calibration is the honesty test: a bettor who says "90%" ` +
     `should be right about nine times in ten. If the realised column tracks the ` +
     `stated one, the uniform-prior posterior is telling the truth.</p>`;
+  if (val.confident > 0 && val.confidentEarly === 0)
+    html +=
+      `<p class="body"><b>The finding:</b> none of the ${val.confident} confident ` +
+      `bets (P ≥ ${D.theta}) preceded proof — in this game the posterior does not ` +
+      `climb, it <em>snaps</em>: constraints kill triples in blocks, so the space ` +
+      `goes from ambiguous to certain in a step. The bettor's real edge is all in ` +
+      `the forced clause: ${val.forced} priced coin flips (mean stated ` +
+      `${(100 * val.forcedMeanP).toFixed(0)}%, realised ` +
+      `${(100 * val.forcedCorrect / val.forced).toFixed(0)}%) taken because ` +
+      `waiting meant near-certain loss to a rival. EV over proof, literally: not ` +
+      `foresight — knowing when the race is lost, and taking the odds instead of ` +
+      `nothing.</p>`;
   el.innerHTML = html;
 }
 </script>

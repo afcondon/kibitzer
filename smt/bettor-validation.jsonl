@@ -8,3 +8,193 @@
 {"seed": 8, "players": 6, "total": 90, "p0": 73, "nWorlds": 144, "proofAt": 87, "engineSolvedAt": 87, "bet": {"at": 86, "pTop": 0.5, "hazard": 1.0, "triple": [3, 6, 16], "correct": true}}
 {"seed": 9, "players": 6, "total": 63, "p0": 57, "nWorlds": 1346, "proofAt": 62, "engineSolvedAt": 62, "bet": {"at": 57, "pTop": 0.6686, "hazard": 0.6924, "triple": [4, 6, 12], "correct": true}}
 {"seed": 10, "players": 6, "total": 99, "p0": 69, "nWorlds": 775, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 11, "players": 6, "total": 74, "p0": 64, "nWorlds": 1384, "proofAt": 73, "engineSolvedAt": 73, "bet": {"at": 64, "pTop": 0.8237, "hazard": 0.8237, "triple": [0, 11, 14], "correct": true}}
+{"seed": 12, "players": 6, "total": 62, "p0": 56, "nWorlds": 1332, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 57, "pTop": 0.6356, "hazard": 0.5156, "triple": [1, 11, 20], "correct": true}}
+{"seed": 13, "players": 6, "total": 88, "p0": 65, "nWorlds": 1124, "proofAt": 87, "engineSolvedAt": 87, "bet": {"at": 87, "pTop": 1.0, "hazard": 1.0, "triple": [2, 11, 16], "correct": true}}
+{"seed": 14, "players": 6, "total": 113, "p0": 65, "nWorlds": 1183, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 15, "players": 6, "total": 155, "p0": 85, "nWorlds": 1285, "proofAt": 153, "engineSolvedAt": 153, "bet": {"at": 150, "pTop": 0.5, "hazard": 1.0, "triple": [4, 11, 18], "correct": true}}
+{"seed": 16, "players": 6, "total": 95, "p0": 67, "nWorlds": 766, "proofAt": 90, "engineSolvedAt": 94, "bet": {"at": 89, "pTop": 0.6667, "hazard": 1.0, "triple": [5, 11, 14], "correct": true}}
+{"seed": 17, "players": 6, "total": 61, "p0": 60, "nWorlds": 1093, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 18, "players": 6, "total": 87, "p0": 75, "nWorlds": 1111, "proofAt": 85, "engineSolvedAt": 85, "bet": {"at": 85, "pTop": 1.0, "hazard": 1.0, "triple": [1, 11, 16], "correct": true}}
+{"seed": 19, "players": 6, "total": 20, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 20, "players": 6, "total": 88, "p0": 75, "nWorlds": 1362, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 21, "players": 6, "total": 166, "p0": 63, "nWorlds": 828, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 151, "pTop": 0.5, "hazard": 1.0, "triple": [4, 11, 13], "correct": false}}
+{"seed": 22, "players": 6, "total": 97, "p0": 63, "nWorlds": 1206, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 70, "pTop": 0.5294, "hazard": 0.7745, "triple": [1, 11, 20], "correct": false}}
+{"seed": 23, "players": 6, "total": 105, "p0": 56, "nWorlds": 580, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 74, "pTop": 0.5, "hazard": 0.8333, "triple": [0, 10, 20], "correct": false}}
+{"seed": 24, "players": 6, "total": 114, "p0": 60, "nWorlds": 902, "proofAt": 112, "engineSolvedAt": 112, "bet": {"at": 109, "pTop": 0.5, "hazard": 1.0, "triple": [1, 10, 12], "correct": true}}
+{"seed": 25, "players": 6, "total": 76, "p0": 58, "nWorlds": 1054, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 26, "players": 6, "total": 117, "p0": 82, "nWorlds": 788, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 27, "players": 6, "total": 109, "p0": 80, "nWorlds": 1345, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 28, "players": 6, "total": 66, "p0": 60, "nWorlds": 1188, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 29, "players": 6, "total": 87, "p0": 78, "nWorlds": 943, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 30, "players": 6, "total": 79, "p0": 72, "nWorlds": 1008, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 31, "players": 6, "total": 119, "p0": 80, "nWorlds": 719, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 116, "pTop": 0.5, "hazard": 1.0, "triple": [2, 6, 14], "correct": false}}
+{"seed": 32, "players": 6, "total": 96, "p0": 78, "nWorlds": 1164, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 84, "pTop": 0.5134, "hazard": 0.5722, "triple": [1, 10, 20], "correct": false}}
+{"seed": 33, "players": 6, "total": 143, "p0": 67, "nWorlds": 1238, "proofAt": 139, "engineSolvedAt": 139, "bet": {"at": 139, "pTop": 1.0, "hazard": 1.0, "triple": [4, 10, 16], "correct": true}}
+{"seed": 34, "players": 6, "total": 87, "p0": 67, "nWorlds": 1175, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 81, "pTop": 0.5, "hazard": 1.0, "triple": [3, 10, 12], "correct": false}}
+{"seed": 35, "players": 6, "total": 71, "p0": 60, "nWorlds": 1094, "proofAt": 70, "engineSolvedAt": 70, "bet": {"at": 70, "pTop": 1.0, "hazard": 1.0, "triple": [0, 9, 18], "correct": true}}
+{"seed": 36, "players": 6, "total": 101, "p0": 75, "nWorlds": 1163, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 37, "players": 6, "total": 181, "p0": 92, "nWorlds": 1341, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 38, "players": 6, "total": 76, "p0": 59, "nWorlds": 721, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 71, "pTop": 0.5333, "hazard": 0.8, "triple": [3, 9, 16], "correct": true}}
+{"seed": 39, "players": 6, "total": 76, "p0": 66, "nWorlds": 1032, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 40, "players": 6, "total": 105, "p0": 69, "nWorlds": 733, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 41, "players": 6, "total": 161, "p0": 75, "nWorlds": 1498, "proofAt": 158, "engineSolvedAt": 158, "bet": {"at": 131, "pTop": 0.5714, "hazard": 0.5714, "triple": [0, 9, 13], "correct": false}}
+{"seed": 42, "players": 6, "total": 154, "p0": 88, "nWorlds": 1236, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 43, "players": 6, "total": 114, "p0": 83, "nWorlds": 1383, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 44, "players": 6, "total": 130, "p0": 72, "nWorlds": 1455, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 101, "pTop": 0.5, "hazard": 0.625, "triple": [3, 9, 17], "correct": false}}
+{"seed": 45, "players": 6, "total": 172, "p0": 85, "nWorlds": 1004, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 46, "players": 6, "total": 125, "p0": 60, "nWorlds": 1024, "proofAt": 121, "engineSolvedAt": 121, "bet": {"at": 121, "pTop": 1.0, "hazard": 1.0, "triple": [5, 9, 14], "correct": true}}
+{"seed": 47, "players": 6, "total": 126, "p0": 86, "nWorlds": 1488, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 125, "pTop": 0.5, "hazard": 1.0, "triple": [0, 7, 16], "correct": false}}
+{"seed": 48, "players": 6, "total": 67, "p0": 58, "nWorlds": 834, "proofAt": 62, "engineSolvedAt": 62, "bet": {"at": 58, "pTop": 0.7674, "hazard": 0.7674, "triple": [1, 8, 16], "correct": true}}
+{"seed": 49, "players": 6, "total": 157, "p0": 93, "nWorlds": 1318, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 150, "pTop": 0.5, "hazard": 1.0, "triple": [2, 8, 14], "correct": false}}
+{"seed": 50, "players": 6, "total": 67, "p0": 58, "nWorlds": 990, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 62, "pTop": 0.6, "hazard": 1.0, "triple": [3, 8, 18], "correct": true}}
+{"seed": 51, "players": 6, "total": 94, "p0": 62, "nWorlds": 473, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 52, "players": 6, "total": 93, "p0": 52, "nWorlds": 738, "proofAt": 91, "engineSolvedAt": 91, "bet": {"at": 91, "pTop": 1.0, "hazard": 1.0, "triple": [5, 8, 20], "correct": true}}
+{"seed": 53, "players": 6, "total": 85, "p0": 62, "nWorlds": 810, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 64, "pTop": 0.6573, "hazard": 0.958, "triple": [0, 8, 16], "correct": true}}
+{"seed": 54, "players": 6, "total": 117, "p0": 66, "nWorlds": 791, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 115, "pTop": 0.5, "hazard": 0.75, "triple": [1, 8, 12], "correct": true}}
+{"seed": 55, "players": 6, "total": 124, "p0": 62, "nWorlds": 810, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 101, "pTop": 0.5556, "hazard": 0.5556, "triple": [2, 8, 20], "correct": false}}
+{"seed": 56, "players": 6, "total": 122, "p0": 65, "nWorlds": 880, "proofAt": 120, "engineSolvedAt": 120, "bet": {"at": 120, "pTop": 1.0, "hazard": 1.0, "triple": [3, 8, 14], "correct": true}}
+{"seed": 57, "players": 6, "total": 101, "p0": 81, "nWorlds": 1248, "proofAt": 99, "engineSolvedAt": 99, "bet": {"at": 96, "pTop": 0.5217, "hazard": 0.5217, "triple": [4, 8, 20], "correct": true}}
+{"seed": 58, "players": 6, "total": 159, "p0": 75, "nWorlds": 1307, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 59, "players": 6, "total": 110, "p0": 76, "nWorlds": 1340, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 106, "pTop": 0.75, "hazard": 1.0, "triple": [0, 7, 12], "correct": true}}
+{"seed": 60, "players": 6, "total": 125, "p0": 92, "nWorlds": 1010, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 119, "pTop": 0.6, "hazard": 1.0, "triple": [2, 7, 18], "correct": false}}
+{"seed": 61, "players": 6, "total": 63, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 62, "players": 6, "total": 83, "p0": 67, "nWorlds": 1341, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 67, "pTop": 0.6846, "hazard": 0.7248, "triple": [3, 7, 20], "correct": true}}
+{"seed": 63, "players": 6, "total": 85, "p0": 68, "nWorlds": 1152, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 80, "pTop": 0.6667, "hazard": 1.0, "triple": [4, 6, 16], "correct": false}}
+{"seed": 64, "players": 6, "total": 120, "p0": 72, "nWorlds": 802, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 112, "pTop": 0.5, "hazard": 1.0, "triple": [5, 7, 12], "correct": true}}
+{"seed": 65, "players": 6, "total": 98, "p0": 67, "nWorlds": 1434, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 66, "players": 6, "total": 110, "p0": 80, "nWorlds": 1113, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 107, "pTop": 0.6154, "hazard": 1.0, "triple": [1, 7, 14], "correct": true}}
+{"seed": 67, "players": 6, "total": 128, "p0": 76, "nWorlds": 1272, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 68, "players": 6, "total": 97, "p0": 78, "nWorlds": 1241, "proofAt": 93, "engineSolvedAt": 93, "bet": {"at": 93, "pTop": 1.0, "hazard": 1.0, "triple": [3, 7, 16], "correct": true}}
+{"seed": 69, "players": 6, "total": 136, "p0": 79, "nWorlds": 1293, "proofAt": 134, "engineSolvedAt": 134, "bet": {"at": 133, "pTop": 0.6667, "hazard": 0.7222, "triple": [4, 7, 12], "correct": true}}
+{"seed": 70, "players": 6, "total": 73, "p0": 62, "nWorlds": 1016, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 71, "players": 6, "total": 157, "p0": 97, "nWorlds": 1076, "proofAt": 155, "engineSolvedAt": null, "bet": {"at": 152, "pTop": 0.5, "hazard": 1.0, "triple": [0, 6, 14], "correct": true}}
+{"seed": 72, "players": 6, "total": 109, "p0": 72, "nWorlds": 1179, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 73, "players": 6, "total": 147, "p0": 82, "nWorlds": 1446, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 74, "players": 6, "total": 138, "p0": 96, "nWorlds": 1121, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 134, "pTop": 0.5, "hazard": 1.0, "triple": [3, 6, 12], "correct": true}}
+{"seed": 75, "players": 6, "total": 115, "p0": 78, "nWorlds": 537, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 76, "players": 6, "total": 117, "p0": 71, "nWorlds": 1251, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 77, "players": 6, "total": 94, "p0": 84, "nWorlds": 1082, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 87, "pTop": 0.6295, "hazard": 0.808, "triple": [0, 6, 20], "correct": true}}
+{"seed": 78, "players": 6, "total": 122, "p0": 65, "nWorlds": 1308, "proofAt": 120, "engineSolvedAt": 120, "bet": {"at": 117, "pTop": 0.5, "hazard": 1.0, "triple": [1, 6, 17], "correct": false}}
+{"seed": 79, "players": 6, "total": 48, "p0": null, "proofAt": null, "engineSolvedAt": 46, "bet": null}
+{"seed": 80, "players": 6, "total": 102, "p0": 66, "nWorlds": 821, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 81, "players": 6, "total": 103, "p0": 82, "nWorlds": 1260, "proofAt": 100, "engineSolvedAt": 100, "bet": {"at": 100, "pTop": 1.0, "hazard": 1.0, "triple": [4, 6, 14], "correct": true}}
+{"seed": 82, "players": 6, "total": 88, "p0": 66, "nWorlds": 1443, "proofAt": 87, "engineSolvedAt": null, "bet": {"at": 83, "pTop": 0.6364, "hazard": 1.0, "triple": [5, 11, 20], "correct": true}}
+{"seed": 83, "players": 6, "total": 59, "p0": 58, "nWorlds": 890, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 84, "players": 6, "total": 78, "p0": 68, "nWorlds": 566, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 85, "players": 6, "total": 161, "p0": 70, "nWorlds": 764, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 138, "pTop": 0.5, "hazard": 1.0, "triple": [2, 11, 18], "correct": true}}
+{"seed": 86, "players": 6, "total": 144, "p0": 64, "nWorlds": 1373, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 136, "pTop": 0.5, "hazard": 1.0, "triple": [3, 11, 19], "correct": false}}
+{"seed": 87, "players": 6, "total": 120, "p0": 79, "nWorlds": 921, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 88, "players": 6, "total": 76, "p0": 71, "nWorlds": 1352, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 89, "players": 6, "total": 103, "p0": 80, "nWorlds": 1419, "proofAt": 101, "engineSolvedAt": 101, "bet": {"at": 99, "pTop": 0.7347, "hazard": 1.0, "triple": [0, 11, 12], "correct": true}}
+{"seed": 90, "players": 6, "total": 58, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 91, "players": 6, "total": 100, "p0": 68, "nWorlds": 798, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 92, "players": 6, "total": 106, "p0": 87, "nWorlds": 960, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 105, "pTop": 0.6667, "hazard": 1.0, "triple": [3, 11, 20], "correct": true}}
+{"seed": 93, "players": 6, "total": 83, "p0": 76, "nWorlds": 1446, "proofAt": 79, "engineSolvedAt": 79, "bet": {"at": 76, "pTop": 0.5353, "hazard": 0.61, "triple": [4, 11, 16], "correct": true}}
+{"seed": 94, "players": 6, "total": 113, "p0": 80, "nWorlds": 1300, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 95, "players": 6, "total": 97, "p0": 56, "nWorlds": 1200, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 92, "pTop": 0.5, "hazard": 1.0, "triple": [0, 10, 18], "correct": true}}
+{"seed": 96, "players": 6, "total": 124, "p0": 54, "nWorlds": 968, "proofAt": 123, "engineSolvedAt": 123, "bet": {"at": 108, "pTop": 0.5, "hazard": 1.0, "triple": [1, 10, 14], "correct": true}}
+{"seed": 97, "players": 6, "total": 104, "p0": 70, "nWorlds": 531, "proofAt": 103, "engineSolvedAt": 103, "bet": {"at": 94, "pTop": 0.6667, "hazard": 1.0, "triple": [2, 10, 20], "correct": true}}
+{"seed": 98, "players": 6, "total": 114, "p0": 72, "nWorlds": 708, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 107, "pTop": 0.625, "hazard": 1.0, "triple": [3, 10, 16], "correct": true}}
+{"seed": 99, "players": 6, "total": 133, "p0": 84, "nWorlds": 1146, "proofAt": 132, "engineSolvedAt": 132, "bet": {"at": 132, "pTop": 1.0, "hazard": 1.0, "triple": [4, 10, 12], "correct": true}}
+{"seed": 100, "players": 6, "total": 132, "p0": 83, "nWorlds": 297, "proofAt": 130, "engineSolvedAt": 130, "bet": {"at": 130, "pTop": 1.0, "hazard": 1.0, "triple": [5, 10, 18], "correct": true}}
+{"seed": 101, "players": 6, "total": 114, "p0": 70, "nWorlds": 1300, "proofAt": 111, "engineSolvedAt": 111, "bet": {"at": 104, "pTop": 0.5, "hazard": 1.0, "triple": [0, 10, 18], "correct": false}}
+{"seed": 102, "players": 6, "total": 37, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 103, "players": 6, "total": 103, "p0": 70, "nWorlds": 529, "proofAt": 102, "engineSolvedAt": 102, "bet": {"at": 98, "pTop": 0.5, "hazard": 1.0, "triple": [2, 6, 16], "correct": false}}
+{"seed": 104, "players": 6, "total": 100, "p0": 80, "nWorlds": 1489, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 82, "pTop": 0.625, "hazard": 0.875, "triple": [3, 10, 12], "correct": true}}
+{"seed": 105, "players": 6, "total": 106, "p0": 66, "nWorlds": 1452, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 104, "pTop": 0.6667, "hazard": 1.0, "triple": [4, 9, 18], "correct": true}}
+{"seed": 106, "players": 6, "total": 114, "p0": 73, "nWorlds": 907, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 96, "pTop": 0.5179, "hazard": 0.9286, "triple": [4, 9, 14], "correct": false}}
+{"seed": 107, "players": 6, "total": 57, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 108, "players": 6, "total": 102, "p0": 62, "nWorlds": 505, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 80, "pTop": 0.5217, "hazard": 0.5217, "triple": [1, 9, 18], "correct": false}}
+{"seed": 109, "players": 6, "total": 160, "p0": 64, "nWorlds": 1332, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 135, "pTop": 0.5, "hazard": 1.0, "triple": [2, 9, 16], "correct": false}}
+{"seed": 110, "players": 6, "total": 82, "p0": 71, "nWorlds": 52, "proofAt": 79, "engineSolvedAt": null, "bet": {"at": 79, "pTop": 1.0, "hazard": 1.0, "triple": [3, 9, 18], "correct": true}}
+{"seed": 111, "players": 6, "total": 85, "p0": 74, "nWorlds": 1321, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 74, "pTop": 0.7176, "hazard": 0.7176, "triple": [4, 9, 14], "correct": true}}
+{"seed": 112, "players": 6, "total": 112, "p0": 70, "nWorlds": 1216, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 113, "players": 6, "total": 74, "p0": 73, "nWorlds": 474, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 114, "players": 6, "total": 92, "p0": 57, "nWorlds": 783, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 115, "players": 6, "total": 86, "p0": 61, "nWorlds": 1121, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 116, "players": 6, "total": 91, "p0": 74, "nWorlds": 1245, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 88, "pTop": 0.7391, "hazard": 0.8696, "triple": [3, 9, 14], "correct": true}}
+{"seed": 117, "players": 6, "total": 94, "p0": 67, "nWorlds": 728, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 67, "pTop": 0.5495, "hazard": 0.5495, "triple": [4, 10, 20], "correct": false}}
+{"seed": 118, "players": 6, "total": 125, "p0": 56, "nWorlds": 1221, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 113, "pTop": 0.5, "hazard": 1.0, "triple": [5, 8, 16], "correct": true}}
+{"seed": 119, "players": 6, "total": 96, "p0": 60, "nWorlds": 567, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 86, "pTop": 0.6, "hazard": 1.0, "triple": [1, 8, 12], "correct": false}}
+{"seed": 120, "players": 6, "total": 166, "p0": 71, "nWorlds": 1195, "proofAt": 163, "engineSolvedAt": 163, "bet": {"at": 162, "pTop": 0.5, "hazard": 1.0, "triple": [1, 8, 18], "correct": true}}
+{"seed": 121, "players": 6, "total": 112, "p0": 64, "nWorlds": 1455, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 106, "pTop": 0.5, "hazard": 1.0, "triple": [4, 8, 14], "correct": false}}
+{"seed": 122, "players": 6, "total": 99, "p0": 61, "nWorlds": 1060, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 93, "pTop": 0.5, "hazard": 1.0, "triple": [3, 8, 20], "correct": true}}
+{"seed": 123, "players": 6, "total": 116, "p0": 81, "nWorlds": 710, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 81, "pTop": 0.5155, "hazard": 0.6282, "triple": [4, 11, 16], "correct": false}}
+{"seed": 124, "players": 6, "total": 85, "p0": 65, "nWorlds": 1472, "proofAt": 81, "engineSolvedAt": 81, "bet": {"at": 81, "pTop": 1.0, "hazard": 1.0, "triple": [5, 8, 12], "correct": true}}
+{"seed": 125, "players": 6, "total": 107, "p0": 83, "nWorlds": 336, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 106, "pTop": 0.5, "hazard": 1.0, "triple": [0, 8, 18], "correct": true}}
+{"seed": 126, "players": 6, "total": 104, "p0": 54, "nWorlds": 1416, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 127, "players": 6, "total": 95, "p0": 70, "nWorlds": 852, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 128, "players": 6, "total": 88, "p0": 54, "nWorlds": 1470, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 83, "pTop": 0.8333, "hazard": 1.0, "triple": [0, 8, 16], "correct": false}}
+{"seed": 129, "players": 6, "total": 97, "p0": 88, "nWorlds": 1062, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 130, "players": 6, "total": 105, "p0": 73, "nWorlds": 812, "proofAt": 103, "engineSolvedAt": 103, "bet": {"at": 81, "pTop": 0.7308, "hazard": 0.8846, "triple": [3, 7, 18], "correct": false}}
+{"seed": 131, "players": 6, "total": 114, "p0": 76, "nWorlds": 530, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 108, "pTop": 0.5, "hazard": 1.0, "triple": [5, 7, 14], "correct": false}}
+{"seed": 132, "players": 6, "total": 129, "p0": 58, "nWorlds": 1253, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 118, "pTop": 0.6667, "hazard": 1.0, "triple": [1, 10, 20], "correct": false}}
+{"seed": 133, "players": 6, "total": 162, "p0": 110, "nWorlds": 1444, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 134, "players": 6, "total": 90, "p0": 76, "nWorlds": 893, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 135, "players": 6, "total": 157, "p0": 64, "nWorlds": 690, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 73, "pTop": 0.5647, "hazard": 0.6353, "triple": [4, 7, 16], "correct": false}}
+{"seed": 136, "players": 6, "total": 126, "p0": 69, "nWorlds": 1222, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 137, "players": 6, "total": 46, "p0": null, "proofAt": null, "engineSolvedAt": 43, "bet": null}
+{"seed": 138, "players": 6, "total": 145, "p0": 76, "nWorlds": 1402, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 137, "pTop": 0.5, "hazard": 0.6667, "triple": [1, 7, 16], "correct": true}}
+{"seed": 139, "players": 6, "total": 124, "p0": 64, "nWorlds": 786, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 109, "pTop": 0.5, "hazard": 1.0, "triple": [1, 7, 12], "correct": false}}
+{"seed": 140, "players": 6, "total": 26, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 141, "players": 6, "total": 97, "p0": 69, "nWorlds": 994, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 142, "players": 6, "total": 34, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 143, "players": 6, "total": 88, "p0": 72, "nWorlds": 942, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 144, "players": 6, "total": 154, "p0": 107, "nWorlds": 1404, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 146, "pTop": 0.8235, "hazard": 1.0, "triple": [1, 6, 12], "correct": true}}
+{"seed": 145, "players": 6, "total": 72, "p0": 62, "nWorlds": 700, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 64, "pTop": 0.5488, "hazard": 0.6463, "triple": [2, 6, 15], "correct": false}}
+{"seed": 146, "players": 6, "total": 54, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 147, "players": 6, "total": 101, "p0": 69, "nWorlds": 926, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 84, "pTop": 0.5, "hazard": 0.875, "triple": [4, 9, 19], "correct": false}}
+{"seed": 148, "players": 6, "total": 94, "p0": 65, "nWorlds": 802, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 93, "pTop": 0.5, "hazard": 1.0, "triple": [5, 6, 16], "correct": true}}
+{"seed": 149, "players": 6, "total": 95, "p0": 68, "nWorlds": 1090, "proofAt": 93, "engineSolvedAt": 93, "bet": {"at": 93, "pTop": 1.0, "hazard": 1.0, "triple": [0, 6, 12], "correct": true}}
+{"seed": 150, "players": 6, "total": 91, "p0": 80, "nWorlds": 364, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 82, "pTop": 0.7143, "hazard": 0.7857, "triple": [1, 6, 18], "correct": true}}
+{"seed": 151, "players": 6, "total": 59, "p0": null, "proofAt": null, "engineSolvedAt": 55, "bet": null}
+{"seed": 152, "players": 6, "total": 95, "p0": 56, "nWorlds": 290, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 88, "pTop": 0.5, "hazard": 1.0, "triple": [3, 11, 19], "correct": true}}
+{"seed": 153, "players": 6, "total": 69, "p0": 54, "nWorlds": 360, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 54, "pTop": 0.5444, "hazard": 1.0, "triple": [4, 11, 15], "correct": false}}
+{"seed": 154, "players": 6, "total": 75, "p0": 60, "nWorlds": 475, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 60, "pTop": 0.5642, "hazard": 0.7158, "triple": [4, 7, 12], "correct": false}}
+{"seed": 155, "players": 6, "total": 98, "p0": 71, "nWorlds": 1234, "proofAt": 95, "engineSolvedAt": 95, "bet": {"at": 95, "pTop": 1.0, "hazard": 1.0, "triple": [0, 11, 18], "correct": true}}
+{"seed": 156, "players": 6, "total": 115, "p0": 57, "nWorlds": 1163, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 110, "pTop": 0.6, "hazard": 1.0, "triple": [1, 11, 20], "correct": false}}
+{"seed": 157, "players": 6, "total": 69, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 158, "players": 6, "total": 118, "p0": 78, "nWorlds": 994, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 112, "pTop": 0.5, "hazard": 1.0, "triple": [3, 11, 15], "correct": false}}
+{"seed": 159, "players": 6, "total": 120, "p0": 70, "nWorlds": 986, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 160, "players": 6, "total": 106, "p0": 72, "nWorlds": 1462, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 99, "pTop": 0.5263, "hazard": 0.5789, "triple": [5, 11, 18], "correct": true}}
+{"seed": 161, "players": 6, "total": 90, "p0": 61, "nWorlds": 972, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 83, "pTop": 0.5, "hazard": 1.0, "triple": [0, 11, 15], "correct": false}}
+{"seed": 162, "players": 6, "total": 102, "p0": 73, "nWorlds": 1488, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 93, "pTop": 0.7273, "hazard": 0.9091, "triple": [1, 11, 19], "correct": true}}
+{"seed": 163, "players": 6, "total": 153, "p0": 80, "nWorlds": 1183, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 135, "pTop": 0.5, "hazard": 1.0, "triple": [0, 11, 16], "correct": false}}
+{"seed": 164, "players": 6, "total": 110, "p0": 78, "nWorlds": 1438, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 107, "pTop": 0.5, "hazard": 1.0, "triple": [3, 10, 12], "correct": true}}
+{"seed": 165, "players": 6, "total": 94, "p0": 65, "nWorlds": 1188, "proofAt": 93, "engineSolvedAt": null, "bet": {"at": 86, "pTop": 0.5, "hazard": 1.0, "triple": [4, 10, 18], "correct": true}}
+{"seed": 166, "players": 6, "total": 102, "p0": 83, "nWorlds": 1467, "proofAt": 99, "engineSolvedAt": 99, "bet": {"at": 89, "pTop": 0.6667, "hazard": 1.0, "triple": [5, 10, 14], "correct": true}}
+{"seed": 167, "players": 6, "total": 86, "p0": 72, "nWorlds": 1101, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 168, "players": 6, "total": 201, "p0": 98, "nWorlds": 928, "proofAt": 198, "engineSolvedAt": 198, "bet": {"at": 197, "pTop": 0.5, "hazard": 1.0, "triple": [1, 10, 16], "correct": true}}
+{"seed": 169, "players": 6, "total": 87, "p0": 73, "nWorlds": 239, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 170, "players": 6, "total": 133, "p0": 61, "nWorlds": 524, "proofAt": 131, "engineSolvedAt": 131, "bet": {"at": 120, "pTop": 0.5, "hazard": 1.0, "triple": [3, 8, 18], "correct": false}}
+{"seed": 171, "players": 6, "total": 97, "p0": 70, "nWorlds": 490, "proofAt": 96, "engineSolvedAt": 96, "bet": {"at": 94, "pTop": 0.5, "hazard": 1.0, "triple": [4, 6, 14], "correct": false}}
+{"seed": 172, "players": 6, "total": 55, "p0": 53, "nWorlds": 1278, "proofAt": 54, "engineSolvedAt": 54, "bet": {"at": 54, "pTop": 1.0, "hazard": 1.0, "triple": [5, 10, 19], "correct": true}}
+{"seed": 173, "players": 6, "total": 140, "p0": 68, "nWorlds": 842, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 128, "pTop": 0.5, "hazard": 1.0, "triple": [0, 10, 16], "correct": true}}
+{"seed": 174, "players": 6, "total": 53, "p0": null, "proofAt": null, "engineSolvedAt": 52, "bet": null}
+{"seed": 175, "players": 6, "total": 80, "p0": 62, "nWorlds": 971, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 72, "pTop": 0.6129, "hazard": 0.9355, "triple": [2, 10, 18], "correct": true}}
+{"seed": 176, "players": 6, "total": 50, "p0": null, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 177, "players": 6, "total": 86, "p0": 66, "nWorlds": 759, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 178, "players": 6, "total": 134, "p0": 66, "nWorlds": 1456, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 82, "pTop": 0.5, "hazard": 0.625, "triple": [5, 9, 20], "correct": false}}
+{"seed": 179, "players": 6, "total": 110, "p0": 73, "nWorlds": 803, "proofAt": 108, "engineSolvedAt": 108, "bet": {"at": 101, "pTop": 0.5, "hazard": 1.0, "triple": [0, 9, 16], "correct": false}}
+{"seed": 180, "players": 6, "total": 124, "p0": 94, "nWorlds": 1041, "proofAt": 123, "engineSolvedAt": 123, "bet": {"at": 102, "pTop": 0.534, "hazard": 0.6699, "triple": [1, 6, 18], "correct": false}}
+{"seed": 181, "players": 6, "total": 106, "p0": 66, "nWorlds": 1196, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 182, "players": 6, "total": 137, "p0": 82, "nWorlds": 1043, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 183, "players": 6, "total": 66, "p0": 61, "nWorlds": 556, "proofAt": 63, "engineSolvedAt": 63, "bet": {"at": 63, "pTop": 1.0, "hazard": 1.0, "triple": [4, 9, 16], "correct": true}}
+{"seed": 184, "players": 6, "total": 64, "p0": 50, "nWorlds": 1141, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 56, "pTop": 0.5179, "hazard": 0.8571, "triple": [0, 9, 12], "correct": false}}
+{"seed": 185, "players": 6, "total": 108, "p0": 78, "nWorlds": 1033, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 92, "pTop": 0.5556, "hazard": 0.5556, "triple": [0, 9, 18], "correct": true}}
+{"seed": 186, "players": 6, "total": 112, "p0": 72, "nWorlds": 990, "proofAt": null, "engineSolvedAt": null, "bet": {"at": 84, "pTop": 0.5093, "hazard": 0.5139, "triple": [1, 9, 13], "correct": false}}
+{"seed": 187, "players": 6, "total": 20, "p0": null, "proofAt": null, "engineSolvedAt": 19, "bet": null}
+{"seed": 188, "players": 6, "total": 64, "p0": 51, "nWorlds": 891, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 189, "players": 6, "total": 140, "p0": 70, "nWorlds": 990, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 190, "players": 6, "total": 47, "p0": null, "proofAt": null, "engineSolvedAt": 46, "bet": null}
+{"seed": 191, "players": 6, "total": 92, "p0": 70, "nWorlds": 1433, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 192, "players": 6, "total": 106, "p0": 73, "nWorlds": 412, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 193, "players": 6, "total": 83, "p0": 67, "nWorlds": 484, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 194, "players": 6, "total": 114, "p0": 55, "nWorlds": 1452, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 195, "players": 6, "total": 128, "p0": 89, "nWorlds": 1368, "proofAt": 127, "engineSolvedAt": 127, "bet": {"at": 127, "pTop": 1.0, "hazard": 1.0, "triple": [4, 8, 18], "correct": true}}
+{"seed": 196, "players": 6, "total": 80, "p0": 63, "nWorlds": 895, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 197, "players": 6, "total": 95, "p0": 78, "nWorlds": 1341, "proofAt": null, "engineSolvedAt": null, "bet": null}
+{"seed": 198, "players": 6, "total": 228, "p0": 78, "nWorlds": 696, "proofAt": 227, "engineSolvedAt": 227, "bet": {"at": 224, "pTop": 0.5, "hazard": 1.0, "triple": [1, 8, 16], "correct": true}}
+{"seed": 199, "players": 6, "total": 140, "p0": 90, "nWorlds": 668, "proofAt": 138, "engineSolvedAt": 138, "bet": {"at": 138, "pTop": 1.0, "hazard": 1.0, "triple": [2, 7, 12], "correct": true}}
+{"seed": 200, "players": 6, "total": 132, "p0": 69, "nWorlds": 1257, "proofAt": null, "engineSolvedAt": null, "bet": null}

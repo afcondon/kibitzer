@@ -39,6 +39,7 @@ make bundle serve # web app on http://localhost:3026
 make skylines     # derivation DAGs as small multiples  → /skylines.html
 make orbits       # the same DAGs bent into circles     → /orbits.html
 make worlds       # the Z3 model space, animated        → /worlds.html, /worlds-gap.html
+make bettor       # the EV watcher-watcher's call       → /bettor.html (BETTOR_SEED=33)
 
 spago run -p kibitzer-example -- 42 --moves --players 6   # any variant, as text
 spago run -p kibitzer-example -- stats 100                # the comparison table
@@ -99,6 +100,14 @@ from in the stream.
 - `worlds-gap.html` — the completeness gap: certainty dots fill when
   the model space agrees on a card, and gain an ink ring when the
   engine's notebook catches up. One game ends five dots, four rings.
+- `bettor.html` — the third column: EV over proof. The engine proves
+  (⊢), the solver entails (⊨); the bettor *makes a call*. Under a
+  uniform prior the worlds page read as a distribution gives the
+  posterior over envelope triples; the same enumeration measures the
+  hazard that some rival is already certain. It bets when confidence
+  clears θ = 0.9 — or when the race forces its hand — and a 200-game
+  silent run scores its calibration (a bettor who says "90%" should
+  be right nine times in ten).
 
 The `smt/` sidecar (Python + Z3) holds the optimal-watcher oracle the
 property tests compare against, and the worlds-page builder. The
