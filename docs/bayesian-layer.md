@@ -5,6 +5,35 @@ there are times we'd be happy to guess before either SMT or the
 deductive framework delivers certainty — the Jane St solution, EV
 rather than proof. Plan for a probabilistic add-on to the demo.*
 
+**Status: SOMEDAY (Andrew, same day).** With toy players the
+behavioral layer isn't really modelling anything — the players *are*
+the policy model, so it's self-referential. Merit as a worked example
+of the triptych's third panel, but not convincing as inference. Filed,
+not scheduled.
+
+**The EV question, answered honestly (same conversation):** is the EV
+calculation itself possible without a better player model? Mostly no —
+but the decomposition is worth keeping. EV(accuse now) = P(top
+hypothesis), computable (Stage A). EV(wait) needs the race hazard,
+which splits:
+
+- *"A rival is already certain"* **is computable from the worlds set
+  alone**: within each surviving world the rival's hand is fixed and
+  the history is observed, so their notebook is deterministic — run
+  the engine from their perspective inside each world and count the
+  worlds where they've solved. No suggestion-policy model needed; ≤
+  cap×rivals engine replays. The one assumption it does embed: rivals
+  are perfect logicians running *our* rule set.
+- *"A rival becomes certain within k moves"* needs future events,
+  which needs their suggestion policy — the toy-player circularity
+  again, irreducibly.
+
+So the only honest EV is horizon-one ("accuse now vs. survive one more
+round") conditional on perfect-logician rivals; the general optimal
+stopping of Stage D is not recoverable without real player models.
+Andrew's instinct correct: the hazard is the part the model can't
+fake.
+
 ## Why it completes the picture
 
 The correspondence table (smt-jtms-brainstorm.md §3) gains its natural

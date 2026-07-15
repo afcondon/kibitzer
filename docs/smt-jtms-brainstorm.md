@@ -111,6 +111,23 @@ rough order of conviction:
    Hylograph's register. Browser honesty: z3-wasm is itself a C++
    port, but consuming Microsoft's maintained artifact ≠ porting one;
    Node-side it's a clean child process.
+
+   *Prior art in-house (found 2026-07-15)*: a pre-Opus-4.5 attempt
+   survives as `sugiyamaLayout` in hylograph-graph
+   (`Data/Graph/Layout.purs`, ~190 lines). It's the classic
+   simplified version, and its gaps are exactly the known
+   makes-it-look-good pieces: **no virtual nodes** for edges spanning
+   layers (long edges plough through everything), **one downward
+   barycenter pass** (dot does repeated up/down median sweeps plus a
+   transposition step), **x = index × spacing** (no Brandes–Köpf
+   alignment, so nothing runs straight), longest-path layering (wide,
+   bottom-heavy vs. network-simplex), no cycle breaking, no edge
+   routing. A re-shot is therefore a *scoped upgrade with readable
+   prior art* (dagre implements each missing piece), not a green
+   field. Andrew: worth another attempt — but the differentiated win
+   is the constraint side, layouts that have NOT been done before
+   (eye-pleasing alignments and the like), with Sugiyama as the
+   workhorse underneath.
 6. Long tail: puzzle showcases with unsat-core explainers (Sudoku
    "why is this cell forced" — the kibitzer argument view, reused);
    Bosun placement/port allocation (real but small); dependency
