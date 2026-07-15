@@ -17,7 +17,7 @@ import Example.Orbits (runOrbits)
 import Example.Skylines (runSkylines)
 import Data.Int as Int
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Monoid (power)
 import Data.Set as Set
 import Data.String as String
@@ -28,7 +28,7 @@ import Kibitzer.Cards (Card, allCards, displayName)
 import Kibitzer.Describe (describeEvent, describeFact, describeSuggestion, playerName)
 import Kibitzer.Event (Event(..))
 import Kibitzer.Game (Result, simulate)
-import Kibitzer.Infer (knowledgeAt)
+import Kibitzer.Infer (knowledgeAt, knowledgeTimeline)
 import Kibitzer.Knowledge (Knowledge, envelopeIn, envelopeOut, facts, factCount, holdsOf, lacksOf, solutionIfKnown)
 import Kibitzer.Observe (Perspective(..))
 import Kibitzer.Player (PlayerCount, PlayerId(..), allPlayers, defaultPlayerCount, handSizes, mkPlayerCount, playerCountToInt)
@@ -54,6 +54,10 @@ main = do
     Just "corpus" -> runCorpus (fromMaybe 100 (Int.fromString =<< Array.index rest 1))
     Just "skylines" -> runSkylines
     Just "orbits" -> runOrbits
+    Just "trace" -> runTrace
+      (fromMaybe 42 (Int.fromString =<< Array.index rest 1))
+      count
+      movement
     _ -> run count movement seedInt
 
 run :: PlayerCount -> Boolean -> Int -> Effect Unit
@@ -164,6 +168,81 @@ rowFor count movement n = Array.foldl accumulate empty (Array.range 1 n)
       , solved: acc.solved + if isJust (solutionIfKnown watcher) then 1 else 0
       , unfinished: acc.unfinished + if isJust result.winner then 0 else 1
       }
+
+-- | Emit one game as a single JSON object for the worlds-canvas builder
+-- | (smt/worlds_trace.py): every event with a watcher-safe label, the
+-- | pass/show constraints in index form, and the engine's solve position
+-- | for the completeness-gap marker. Only watcher-visible information —
+-- | the solution rides along solely for the page's ground-truth caption.
+runTrace :: Int -> PlayerCount -> Boolean -> Effect Unit
+runTrace seedInt count movement = do
+  let
+    result = simulate
+      { playerCount: count
+      , seed: mkSeed seedInt
+      , policy: randomLegalPolicy
+      , maxTurns: 600
+      , movement
+      }
+    snapshots = knowledgeTimeline count Watcher result.log
+    solvedAt = Array.findIndex (isJust <<< solutionIfKnown) snapshots
+    players = allPlayers count
+    cardIx c = fromMaybe (-1) (Array.elemIndex c allCards)
+    ixSet s = jArr (map (show <<< cardIx) (Set.toUnfoldable s))
+  log $ jObj
+    [ Tuple "seed" (show seedInt)
+    , Tuple "players" (show (playerCountToInt count))
+    , Tuple "movement" (if movement then "true" else "false")
+    , Tuple "handSizes"
+        (jArr (map (\p -> show (fromMaybe 0 (Map.lookup p (handSizes count)))) players))
+    , Tuple "solution" (ixSet (suggestionCards result.solution))
+    , Tuple "engineSolvedAt" (maybe "null" show solvedAt)
+    -- per card: the first position where the notebook knows its place
+    -- (a hand or the envelope) — the per-column completeness ruler
+    , Tuple "cardKnownAt"
+        ( jArr $ allCards <#> \c -> maybe "null" show $ Array.findIndex
+            ( \k -> Set.member c (envelopeIn k)
+                || Array.any (\p -> Set.member c (holdsOf k p)) players
+            )
+            snapshots
+        )
+    , Tuple "events" (jArr (map traceEvent result.log))
+    ]
+  where
+  traceEvent e = jObj
+    [ Tuple "label" (jStr (watcherLabel e))
+    , Tuple "constraint" (constraintJson e)
+    ]
+
+  -- what the watcher may be told; never a card name from a show
+  watcherLabel = case _ of
+    GameDealt _ -> "cards dealt; three sealed in the envelope"
+    Moved { player, roll } -> playerName player <> " rolls " <> show roll
+    SuggestionMade { by, suggestion } ->
+      playerName by <> " asks: " <> describeSuggestion suggestion
+    Passed { player } -> playerName player <> " passes"
+    CardShown { by, to } ->
+      playerName by <> " shows " <> playerName to <> " a card — unseen"
+    AccusationMade { by, correct } ->
+      playerName by <> " accuses — " <> if correct then "correct" else "wrong"
+
+  constraintJson = case _ of
+    Passed { player: PlayerId p, suggestion } -> jObj
+      [ Tuple "type" (jStr "pass")
+      , Tuple "player" (show p)
+      , Tuple "cards" (ixCards suggestion)
+      ]
+    CardShown { by: PlayerId b, suggestion } -> jObj
+      [ Tuple "type" (jStr "show")
+      , Tuple "player" (show b)
+      , Tuple "cards" (ixCards suggestion)
+      ]
+    _ -> "null"
+    where
+    ixCards s = jArr
+      ( map (show <<< \c -> fromMaybe (-1) (Array.elemIndex c allCards))
+          (Set.toUnfoldable (suggestionCards s))
+      )
 
 -- | Emit every stats-mode game as one JSON object per line — the corpus
 -- | the SMT "optimal watcher" (smt/optimal_watcher.py) analyses. Only

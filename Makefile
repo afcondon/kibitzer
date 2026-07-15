@@ -5,7 +5,7 @@
 # is the manual fallback when the router isn't running.
 PORT ?= 3026
 
-.PHONY: help bootstrap build test example skylines orbits bundle serve clean
+.PHONY: help bootstrap build test example skylines orbits worlds bundle serve clean
 
 help:
 	@echo "kibitzer targets:"
@@ -15,6 +15,7 @@ help:
 	@echo "  example    run the CLI transcript demo (SEED=42 to override)"
 	@echo "  skylines   regenerate frontend/public/skylines.html (small multiples)"
 	@echo "  orbits     regenerate frontend/public/orbits.html (radial small multiples)"
+	@echo "  worlds     regenerate the Z3 model-space pages (worlds.html, worlds-gap.html)"
 	@echo "  bundle     bundle the frontend to frontend/public/bundle.js"
 	@echo "  serve      serve the frontend on http://localhost:$(PORT)"
 	@echo "  clean      remove build output"
@@ -37,6 +38,16 @@ skylines:
 
 orbits:
 	spago run --quiet -p kibitzer-example -- orbits > frontend/public/orbits.html
+
+# The Z3 model-space pages (needs smt/.venv with z3-solver installed).
+# worlds.html: seed 33 six players — the 1,238-world collapse to a solved
+# view. worlds-gap.html: seed 42 four players — the completeness gap (the
+# space ends certain of five cards, the notebook of four).
+worlds:
+	spago run --quiet -p kibitzer-example -- trace 33 --players 6 > smt/trace-33.json
+	smt/.venv/bin/python smt/worlds_trace.py smt/trace-33.json > frontend/public/worlds.html
+	spago run --quiet -p kibitzer-example -- trace 42 > smt/trace-42.json
+	smt/.venv/bin/python smt/worlds_trace.py smt/trace-42.json > frontend/public/worlds-gap.html
 
 bundle:
 	spago bundle -p kibitzer-frontend

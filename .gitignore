@@ -12,3 +12,5 @@ bundle.js
 smt/.venv/
 smt/corpus.jsonl
 smoke/*.png
+smt/trace-*.json
+smt/__pycache__/
