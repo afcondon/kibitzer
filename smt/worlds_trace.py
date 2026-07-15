@@ -25,7 +25,7 @@ import json
 import math
 import sys
 
-from z3 import And, If, Int, Or, Solver, Sum, sat
+from z3 import And, If, Int, Or, Solver, Sum, sat, unsat
 
 SUSPECTS = range(0, 6)
 WEAPONS = range(6, 12)
@@ -143,6 +143,52 @@ def main():
     print(f"final worlds: {len(alive)}; optimal solve at {optimal_solved_at}; "
           f"engine solve at {trace['engineSolvedAt']}", file=sys.stderr)
 
+    # when does the space pin each card? For positions >= p0 the replay
+    # answers directly (all survivors agree); for cards already pinned at
+    # p0 the moment lies in the unenumerable stretch — but "pinned at p"
+    # is just two solver calls (take any model's value, ask if any world
+    # disagrees; unsat means pinned), and pinning is monotone, so binary
+    # search finds each card's moment
+    def z3_pinned(c, pos):
+        place = [Int(f"q_{i}") for i in range(21)]
+        sv = base_solver(trace, place)
+        sv.add(constraints_upto(trace, place, pos))
+        assert sv.check() == sat
+        v = sv.model()[place[c]].as_long()
+        sv.add(place[c] != v)
+        return (sv.check() == unsat, v)
+
+    pinned = [{"at": None, "loc": None} for _ in range(21)]
+    alive_set = list(range(len(worlds)))
+    def note_agreements(pos, current):
+        for c in range(21):
+            if pinned[c]["at"] is not None or not current:
+                continue
+            v = worlds[current[0]][c]
+            if all(worlds[i][c] == v for i in current):
+                pinned[c] = {"at": pos, "loc": v}
+    note_agreements(p0, alive_set)
+    replay_alive = list(alive_set)
+    for pos in range(p0 + 1, total + 1):
+        k = trace["events"][pos - 1]["constraint"]
+        if k is not None:
+            replay_alive = [i for i in replay_alive if satisfies(worlds[i], k)]
+        note_agreements(pos, replay_alive)
+    for c in range(21):
+        if pinned[c]["at"] == p0:  # pinned somewhere in the unenumerable stretch
+            lo, hi = 1, p0
+            while lo < hi:
+                mid = (lo + hi) // 2
+                ok, _ = z3_pinned(c, mid)
+                if ok:
+                    hi = mid
+                else:
+                    lo = mid + 1
+            pinned[c]["at"] = lo
+    print("space pins: " + ", ".join(
+        f"{CARD_SHORT[c]}@E{pinned[c]['at']-1}" for c in range(21)
+        if pinned[c]["at"] is not None), file=sys.stderr)
+
     # the pre-enumeration stretch of the collapse curve: the position-0
     # count is exact in closed form (envelope triples x hand multinomial),
     # the flat stretches are exact (uninformative events kill nothing),
@@ -186,6 +232,7 @@ def main():
         "cardNames": CARD_SHORT,
         "estLog": [round(v, 3) for v in est_log],  # log10 counts, positions 0..p0
         "total0": total0,
+        "pinned": pinned,  # per card: first position the space pins it, and where
     }
     print(render_page(data))
 
@@ -229,8 +276,10 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
            align-items: center; justify-content: flex-start; gap: .5rem;
            padding-top: 7rem; text-align: center; }
  #toobig .big { font-size: 2.3rem; font-weight: 700; letter-spacing: -0.01em;
-                font-variant-numeric: tabular-nums; }
- #toobig .sub { font-size: .85rem; color: var(--muted); max-width: 34rem; }
+                font-variant-numeric: tabular-nums;
+                background: rgba(255,255,255,.88); padding: .1rem 1rem; }
+ #toobig .sub { font-size: .85rem; color: var(--muted); max-width: 34rem;
+                background: rgba(255,255,255,.88); padding: .1rem .8rem; }
  .rail { display: flex; gap: 1.25rem; align-items: baseline;
          font-size: .85rem; min-height: 1.4rem; }
  .rail .count { font-variant-numeric: tabular-nums; color: var(--muted); }
@@ -431,13 +480,21 @@ function sizeCanvas() {
 
 // per-world animation state: y, h, alpha (targets set on position change)
 const rows = D.worlds.map(() => ({ y: 0, h: 0, a: 1, ty: 0, th: 0, ta: 1 }));
+// per-column state for the unenumerable stretch: what the whole giant
+// space already agrees on, drawn as full-height mono columns
+const cols = D.cardNames.map(() => ({ a: 0, ta: 0 }));
 let position = 0;
 
 const toobig = document.getElementById("toobig");
 function retarget() {
   if (position < D.p0) {
-    // beyond enumeration: the grid dissolves, the notice takes the stage
+    // beyond enumeration: the grid dissolves; what remains is the big
+    // number and the columns the whole space has already pinned
     for (const r of rows) r.ta = 0;
+    cols.forEach((cl, c) => {
+      const pin = D.pinned[c];
+      cl.ta = pin.at != null && position >= pin.at ? 1 : 0;
+    });
     toobig.style.display = "flex";
     document.getElementById("toobig-num").textContent =
       (position === 0 ? "" : "≈ ") +
@@ -452,6 +509,7 @@ function retarget() {
     return;
   }
   toobig.style.display = "none";
+  for (const cl of cols) cl.ta = 0;
   const alive = aliveAt(position);
   const h = Math.min(24, CSS_H / Math.max(alive.length, 26));
   const gap = h > 6 ? 1 : 0;
@@ -472,12 +530,12 @@ function updateChrome(alive) {
   // without a ring IS the completeness gap, per card, live.
   let gap = 0;
   for (let c = 0; c < 21; c++) {
-    let loc = alive.length ? D.worlds[alive[0]][c] : -1;
-    for (const w of alive) if (D.worlds[w][c] !== loc) { loc = -1; break; }
+    const pin = D.pinned[c];
+    const isPinned = pin.at != null && position >= pin.at;
     const dot = certDots[c];
     const known = D.cardKnownAt[c] != null && position >= D.cardKnownAt[c];
-    if (loc >= 0) {
-      dot.style.background = colour(loc); dot.style.opacity = 1;
+    if (isPinned) {
+      dot.style.background = colour(pin.loc); dot.style.opacity = 1;
       dot.classList.toggle("known", known);
       if (!known) gap++;
     } else {
@@ -515,6 +573,10 @@ function tick(now) {
     if (Math.abs(r.ty - r.y) > 0.2 || Math.abs(r.th - r.h) > 0.1 || Math.abs(r.ta - r.a) > 0.01)
       moving = true;
   }
+  for (const cl of cols) {
+    cl.a += (cl.ta - cl.a) * k;
+    if (Math.abs(cl.ta - cl.a) > 0.01) moving = true;
+  }
   draw();
   if (moving) requestAnimationFrame(tick); else { running = false; draw(true); }
 }
@@ -534,6 +596,15 @@ function draw(snap) {
       ctx.fillStyle = colour(world[c]);
       ctx.fillRect(c * colW + 0.5, y, colW - 1, h);
     }
+  }
+  // the pinned columns of the unenumerable stretch
+  for (let c = 0; c < COLS; c++) {
+    const cl = cols[c];
+    const a = snap ? cl.ta : cl.a;
+    if (a < 0.01) continue;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = colour(D.pinned[c].loc);
+    ctx.fillRect(c * colW + 0.5, 0, colW - 1, CSS_H);
   }
   ctx.globalAlpha = 1;
 }
