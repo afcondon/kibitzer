@@ -1,5 +1,6 @@
-// Smoke for the ControlPanel + TransportBar components after the
-// componentization refactor: draft seed, deal, random, players, board.
+// Smoke for the header SeedControl + TransportBar and the ControlPanel
+// (players/board): seed commits on Enter, reroll randomises, table-shape
+// changes re-deal immediately with the committed seed.
 import { createRequire } from 'module';
 const require = createRequire('/Users/afc/node_modules/');
 const puppeteer = require('puppeteer-core');
@@ -23,40 +24,32 @@ await page.goto(URL0, { waitUntil: 'networkidle0' });
 await sleep(400);
 
 const state = () => page.evaluate(() => ({
-  seed: document.querySelector('.controls input[type=text]').value,
+  seed: document.querySelector('.seed-control input').value,
   players: document.querySelector('.controls select').value,
   board: document.querySelector('.controls input[type=checkbox]').checked,
   url: location.search,
-  events: document.querySelectorAll('.terminal li').length
-    || document.querySelectorAll('.term-line').length,
   posLabel: document.querySelector('.position')?.textContent ?? '',
 }));
 
 const s0 = await state();
-check('seed field shows URL seed', s0.seed === '42', s0.seed);
+check('seed field (header) shows URL seed', s0.seed === '42', s0.seed);
 check('players select shows URL players', s0.players === '4', s0.players);
 
-// --- type a draft seed, then Deal
-await page.evaluate(() => {
-  const input = document.querySelector('.controls input[type=text]');
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-  setter.call(input, '156372');
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-});
-await page.evaluate(() => {
-  [...document.querySelectorAll('.controls button')].find((b) => b.textContent === 'Deal').click();
-});
+// --- type a seed and press Enter: commits without any Deal button
+await page.click('.seed-control input', { clickCount: 3 });
+await page.type('.seed-control input', '156372');
+await page.keyboard.press('Enter');
 await sleep(400);
 const s1 = await state();
-check('deal with typed seed updates URL', s1.url.includes('seed=156372'), s1.url);
-check('seed field keeps typed seed', s1.seed === '156372', s1.seed);
+check('Enter commits the typed seed (URL)', s1.url.includes('seed=156372'), s1.url);
+check('seed field keeps the committed seed', s1.seed === '156372', s1.seed);
 
-// --- players change re-deals at once, carrying the seed
+// --- players change re-deals at once with the committed seed
 await page.select('.controls select', '6');
 await sleep(400);
 const s2 = await state();
 check('players change re-deals (URL players=6)', s2.url.includes('players=6'), s2.url);
-check('players change keeps seed', s2.url.includes('seed=156372'), s2.url);
+check('players change keeps the committed seed', s2.url.includes('seed=156372'), s2.url);
 
 // --- board toggle re-deals with moves=1
 await page.evaluate(() => {
@@ -67,17 +60,15 @@ const s3 = await state();
 check('board toggle re-deals (URL moves=1)', s3.url.includes('moves=1'), s3.url);
 check('board checkbox reflects state', s3.board === true);
 
-// --- random rolls a fresh seed and writes it back into the field
-await page.evaluate(() => {
-  [...document.querySelectorAll('.controls button')].find((b) => b.textContent === 'Random').click();
-});
+// --- reroll rolls a fresh seed and writes it back into the field
+await page.click('.seed-control .reroll');
 await sleep(400);
 const s4 = await state();
-check('random rolls a new seed', s4.seed !== '156372' && /^\d+$/.test(s4.seed), s4.seed);
-check('random seed reaches the URL', s4.url.includes(`seed=${s4.seed}`), s4.url);
-check('random keeps players and board', s4.url.includes('players=6') && s4.url.includes('moves=1'), s4.url);
+check('reroll rolls a new seed', s4.seed !== '156372' && /^\d+$/.test(s4.seed), s4.seed);
+check('rerolled seed reaches the URL', s4.url.includes(`seed=${s4.seed}`), s4.url);
+check('reroll keeps players and board', s4.url.includes('players=6') && s4.url.includes('moves=1'), s4.url);
 
-// --- transport: play toggles, step moves the position label
+// --- transport: step moves the position label, jump reaches the end
 await page.evaluate(() => {
   [...document.querySelectorAll('.transport-btn')].find((b) => b.textContent === '▶▶').click();
 });

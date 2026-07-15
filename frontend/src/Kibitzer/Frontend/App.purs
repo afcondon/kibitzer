@@ -36,6 +36,7 @@ import Halogen.Subscription as HS
 import Kibitzer.Cascade (cascadeTimeline)
 import Kibitzer.Frontend.Component.CascadeHost as CascadeHost
 import Kibitzer.Frontend.Component.ControlPanel as ControlPanel
+import Kibitzer.Frontend.Component.SeedControl as SeedControl
 import Kibitzer.Frontend.Component.TransportBar as TransportBar
 import Kibitzer.Frontend.Crossref as Crossref
 import Kibitzer.Frontend.Types (Game, Tab(..), currentKnowledge, maxPosition)
@@ -77,6 +78,7 @@ data Action
   = Initialize
   | SetTab Tab
   | HandleControls ControlPanel.Output
+  | HandleSeed SeedControl.Output
   | HandleTransport TransportBar.Output
   | HandleCascade CascadeHost.Output
   | SetHover (Maybe Crossref.Hover)
@@ -84,12 +86,14 @@ data Action
 
 type Slots =
   ( controls :: ControlPanel.Slot
+  , seed :: SeedControl.Slot
   , transport :: TransportBar.Slot
   , packs :: CascadeHost.Slot
   , orbits :: CascadeHost.Slot
   )
 
 _controls = Proxy :: Proxy "controls"
+_seed = Proxy :: Proxy "seed"
 _transport = Proxy :: Proxy "transport"
 _packs = Proxy :: Proxy "packs"
 _orbits = Proxy :: Proxy "orbits"
@@ -119,11 +123,18 @@ handleAction = case _ of
       , board: params.moves
       }
   SetTab tab -> H.modify_ _ { tab = tab, playing = false }
-  HandleControls output -> case output of
-    ControlPanel.DealRequested config -> startGame config
-    ControlPanel.RandomRequested { players, board } -> do
-      n <- liftEffect (randomInt 1 999999)
-      startGame { seed: n, players, board }
+  HandleControls output -> do
+    config <- H.gets _.config
+    case output of
+      ControlPanel.PlayersChanged n -> startGame config { players = n }
+      ControlPanel.BoardToggled b -> startGame config { board = b }
+  HandleSeed output -> do
+    config <- H.gets _.config
+    case output of
+      SeedControl.Committed n -> startGame config { seed = n }
+      SeedControl.Rerolled -> do
+        n <- liftEffect (randomInt 1 999999)
+        startGame config { seed = n }
   HandleTransport output -> case output of
     TransportBar.Scrubbed n -> moveTo n
     TransportBar.PlayToggled -> do
@@ -242,13 +253,13 @@ render st =
         , case st.game of
             Nothing -> HH.main_ [ HH.text "Dealing…" ]
             Just game ->
-              HH.main [ HP.class_ (HH.ClassName "split3") ]
+              HH.main [ HP.class_ (HH.ClassName "split4") ]
                 [ tableColumn st game
                 , terminalPane terminalHover (hoverEvents st game) game st.position
                 , HH.div [ HP.class_ (HH.ClassName "watcher-pane") ]
-                    [ notebookPane game st.position
-                    , feedPane game st.position
-                    ]
+                    [ notebookPane game st.position ]
+                , HH.div [ HP.classes (map HH.ClassName [ "watcher-pane", "feed-col" ]) ]
+                    [ feedPane game st.position ]
                 ]
         ]
 
@@ -273,7 +284,9 @@ hoverEvents st game = case st.hover of
 tableColumn :: forall m. MonadAff m => State -> Game -> H.ComponentHTML Action Slots m
 tableColumn st game =
   HH.div [ HP.class_ (HH.ClassName "table-col") ]
-    [ HH.slot _controls unit ControlPanel.component st.config HandleControls
+    [ HH.slot _controls unit ControlPanel.component
+        { players: st.config.players, board: st.config.board }
+        HandleControls
     , boardPane game st.position
     ]
 
@@ -292,9 +305,13 @@ header st =
             ]
         ]
     , case st.game of
-        Just game -> HH.slot _transport unit TransportBar.component
-          { position: st.position, max: maxPosition game, playing: st.playing }
-          HandleTransport
+        Just game ->
+          HH.div [ HP.class_ (HH.ClassName "transport-cell") ]
+            [ HH.slot _seed unit SeedControl.component st.config.seed HandleSeed
+            , HH.slot _transport unit TransportBar.component
+                { position: st.position, max: maxPosition game, playing: st.playing }
+                HandleTransport
+            ]
         Nothing -> HH.text ""
     ]
 

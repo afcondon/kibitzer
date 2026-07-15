@@ -32,7 +32,7 @@ body {
 
 header {
   display: grid;
-  grid-template-columns: 1fr minmax(24rem, 36rem);
+  grid-template-columns: 1fr minmax(30rem, 46rem);
   gap: 2rem;
   align-items: end;
   padding: 1.25rem 2rem 1rem;
@@ -671,4 +671,60 @@ h2 {
 .term-line.hl {
   background: #faf0f0;
   box-shadow: inset 3px 0 0 var(--accent, #d92b2b);
+}
+
+/* ---------- seed control in the top nav ---------- */
+
+.transport-cell { display: flex; gap: 1.25rem; align-items: center; }
+.transport-cell .transport-bar { flex: 1; }
+
+.seed-control { display: flex; gap: 0.4rem; align-items: center; }
+
+.seed-control label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.seed-control input {
+  width: 5rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.seed-control .reroll {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  cursor: pointer;
+}
+.seed-control .reroll:hover { background: var(--ink); color: var(--paper); }
+
+/* ---------- game tab: table | terminal | notebook | feed ---------- */
+
+.split4 {
+  display: grid;
+  grid-template-columns: minmax(230px, 5fr) minmax(220px, 4fr) minmax(300px, 6fr) minmax(300px, 6fr);
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.split4 > * { overflow-y: auto; min-height: 0; }
+
+.split4 .table-col .controls { padding: 0.75rem 1.25rem; }
+.split4 .board-pane { padding: 1rem 1.25rem; }
+.split4 .watcher-pane { border-right: 1px solid var(--ink); padding: 1.5rem 1.5rem; }
+.split4 .feed-col { border-right: none; }
+
+@media (max-width: 900px) {
+  .split4 { grid-template-columns: 1fr; }
+  .split4 .watcher-pane { border-right: none; border-bottom: 1px solid var(--ink); }
 }

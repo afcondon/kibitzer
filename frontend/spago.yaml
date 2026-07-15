@@ -30,3 +30,4 @@ package:
     - tailrec
     - tuples
     - web-html
+    - web-uievents

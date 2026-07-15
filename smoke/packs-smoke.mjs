@@ -54,6 +54,31 @@ await sleep(3500);
 const t2 = await page.evaluate(() => document.querySelectorAll('#packs-bubbles circle').length);
 check('scrub to start restores 147 possibilities', t2 === 147, `got ${t2}`);
 
+// stepping over an uninformative event must not reheat the simulation:
+// a reheat jiggles bubbles by many pixels; only the sim's sub-pixel
+// coasting tail (it runs a touch past the render loop's cutoff) is
+// tolerated. This is the "pulse on every move" regression check.
+const samplePos = () => page.evaluate(() =>
+  [...document.querySelectorAll('#packs-bubbles circle')].slice(0, 16)
+    .map(c => [parseFloat(c.getAttribute('cx')), parseFloat(c.getAttribute('cy'))]));
+let prev = [];
+for (let i = 0; i < 24; i++) { // wait for visible rest
+  const now = await samplePos();
+  if (prev.length && now.every((p, j) => Math.hypot(p[0] - prev[j][0], p[1] - prev[j][1]) < 0.1)) break;
+  prev = now;
+  await sleep(500);
+}
+const posBefore = await samplePos();
+await page.evaluate(() => [...document.querySelectorAll('.transport-btn')].find(b => b.textContent === '▶▶').click());
+await sleep(900); // E0 is the deal — the watcher learns nothing
+const posAfter = await samplePos();
+const maxMove = Math.max(...posAfter.map((p, j) =>
+  Math.hypot(p[0] - posBefore[j][0], p[1] - posBefore[j][1])));
+check('uninformative step does not reheat the packs', maxMove < 1.5,
+  `max movement ${maxMove.toFixed(2)}px`);
+await page.evaluate(() => [...document.querySelectorAll('.transport-btn')].find(b => b.textContent === '⏮').click());
+await sleep(600);
+
 // step through some early events; check orbits appear when a disjunction is live
 let sawOrbit = false;
 for (let i = 0; i < 20; i++) {

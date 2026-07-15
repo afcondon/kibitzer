@@ -159,7 +159,7 @@ handleAction = case _ of
       stopPacksSim
       initView
     else if input.position /= st.position then do
-      if st.packView then syncPacksMove
+      if st.packView then syncPacksMove st.position
       else syncCascadeMove st.position input.position
     else when (input.hover /= st.hover) do
       -- a hover change alone: repaint the moving layer in place
@@ -293,8 +293,13 @@ stopPacksSim = do
 -- | a card proven into the envelope is *seen* being proven by its copies
 -- | converging from every pack. Orbit membership follows the live
 -- | disjunctions via a rebuilt force setup.
-syncPacksMove :: forall m. MonadAff m => HostM m
-syncPacksMove = do
+-- |
+-- | Reheats are earned, not automatic: `updateData`/`updateSetup` both
+-- | wake the simulation, so an event that moves nothing (a suggestion,
+-- | a pass that only ghosts bubbles) must not call them — that was the
+-- | tell-tale pulse on every step. States still refresh and repaint.
+syncPacksMove :: forall m. MonadAff m => Int -> HostM m
+syncPacksMove oldPos = do
   st <- H.get
   case st.simHandle of
     Nothing -> pure unit
@@ -303,6 +308,8 @@ syncPacksMove = do
         count = st.game.result.playerCount
         knowledge = currentKnowledge st.game st.position
         keep = Packs.survivorIds count knowledge
+        orbits = Packs.orbitSets knowledge
+        oldOrbits = Packs.orbitSets (currentKnowledge st.game oldPos)
       current <- liftEffect handle.getNodes
       let
         currentIds = Set.fromFoldable (map _.id current)
@@ -320,8 +327,13 @@ syncPacksMove = do
         addedIds = Set.difference keep currentIds
         kept = Array.filter (\n -> Set.member n.id keep) current
         fresh = Array.filter (\n -> Set.member n.id addedIds) (Packs.allTemplateNodes count)
-      _ <- liftEffect $ handle.updateData (kept <> fresh) []
-      liftEffect $ handle.updateSetup (Packs.setupFor count (Packs.orbitSets knowledge))
+        popChanged = not (Array.null removed) || not (Set.isEmpty addedIds)
+        orbitsChanged = orbits /= oldOrbits
+      when popChanged do
+        _ <- liftEffect $ handle.updateData (kept <> fresh) []
+        pure unit
+      when orbitsChanged
+        (liftEffect $ handle.updateSetup (Packs.setupFor count orbits))
       H.modify_ _
         { packStates = Packs.deriveStates count knowledge
         , packsAnim =
@@ -334,7 +346,9 @@ syncPacksMove = do
             }
         }
       redrawPacksPosition
-      scheduleAnimFrame
+      -- physics untouched: one repaint picks up state changes (ghosting)
+      if popChanged || orbitsChanged then scheduleAnimFrame
+      else drawPacksFrame
 
 -- | A timeline move while the grid is showing: reconcile the animation
 -- | state with the fact diff, keep the orbit simulation's population in
@@ -413,8 +427,9 @@ stopRadialSim = do
 
 -- | A scrub while the orbit sim is alive: survivors keep their live
 -- | positions, newborn facts spawn at their analytic slots, the links
--- | follow the visible premise DAG. `updateData` reheats, so the frame
--- | loop picks the motion up.
+-- | follow the visible premise DAG. `updateData` reheats — so it only
+-- | runs when the population actually changed (an uninformative event
+-- | must not make the whole web shiver).
 syncRadialPopulation :: forall m. MonadAff m => HostM m
 syncRadialPopulation = do
   st <- H.get
@@ -431,9 +446,10 @@ syncRadialPopulation = do
         fresh = ri.visible
           # Array.filter (\f -> let FactId n = f.id in not (Set.member n currentIds))
           # map (Radial.templateNode ri.depths ri.maxDepth ri.total)
-      _ <- liftEffect $ handle.updateData (kept <> fresh)
-        (Radial.linksFor ri.visible st.game.allEdges)
-      pure unit
+      when (not (Array.null fresh) || Array.length kept /= Array.length current) do
+        _ <- liftEffect $ handle.updateData (kept <> fresh)
+          (Radial.linksFor ri.visible st.game.allEdges)
+        pure unit
 
 -- | Schedule exactly one animation frame; its callback re-enters Halogen
 -- | as AnimTick. Self-perpetuating while animations are active — this is
