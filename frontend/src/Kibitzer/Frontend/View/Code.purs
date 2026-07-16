@@ -83,12 +83,12 @@ saturate source knowledge =
   in if next == knowledge then knowledge else saturate source next
 
 ruleEnvelopeByElimination :: Knowledge -> Array Derived
-ruleEnvelopeByElimination knowledge@(Knowledge k) = do
+ruleEnvelopeByElimination knowledge = do
   c <- allCards
   guard (Array.all (\p -> Set.member c (lacksOf knowledge p))
-                   (allPlayers k.playerCount))
+                   (allPlayers (playerCountOf knowledge)))
   let premises = Array.mapMaybe (\p -> factIdFor (Lacks p c) knowledge)
-                                (allPlayers k.playerCount)
+                                (allPlayers (playerCountOf knowledge))
   pure { claim: InEnvelope c, rule: EnvelopeByElimination
        , origins: [], premises }"""
         [ para

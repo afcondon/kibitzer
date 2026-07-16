@@ -3,11 +3,12 @@
 -- | over the same stream plus their private sightings. Same engine, same
 -- | rules — the only difference is what was witnessed.
 -- |
--- | `learn` records the direct consequences of one observation, then runs
--- | `saturate`: a fixpoint over the deduction rules below. Termination is
--- | by monotonicity — every rule only adds claims to finite sets or shrinks
--- | disjunction candidate sets, and no claim is ever retracted, so a pass
--- | that changes nothing is the fixpoint and one must come.
+-- | Since the jtms-port the fixpoint machinery lives in `Jtms.Engine`; this
+-- | module supplies the domain: the deduction rules (in prim form — they
+-- | predate the library's eDSL and stay verbatim so the golden feeds do
+-- | too) and the residue refinement (`pruneDisjunctions`). Termination is
+-- | by monotonicity, exactly as before: rules only add claims to finite
+-- | sets, refinement only shrinks candidate sets, nothing retracts.
 -- |
 -- | Rule order within a pass is fixed and documented (`allRules`), because
 -- | it decides which justification a multiply-derivable fact receives, and
@@ -30,9 +31,11 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
+import Jtms.Engine as Engine
 import Kibitzer.Cards (Card, allCards, allCategories, cardsIn)
 import Kibitzer.Event (EventId, Log)
-import Kibitzer.Knowledge (Claim(..), Disjunction(..), FactId, Knowledge(..), Rule(..), addDisjunction, addFact, emptyKnowledge, envelopeIn, envelopeOut, factIdFor, heldByAnyone, holdsOf, lacksOf)
+import Kibitzer.Knowledge (Claim(..), Disjunction(..), Knowledge(..), Residue, Rule(..), addDisjunction, addFact, disjunctions, envelopeIn, envelopeOut, factIdFor, handSizesOf, heldByAnyone, heldEntries, holdsOf, lacksOf, playerCountOf, toWhy, withHandSizes, emptyKnowledge)
+import Jtms.Kernel (FactId)
 import Kibitzer.Observe (Observation(..), Perspective, observeLog)
 import Kibitzer.Player (PlayerCount, PlayerId, allPlayers)
 import Kibitzer.Suggestion (suggestionCards)
@@ -62,7 +65,7 @@ learn (Tuple source observation) knowledge =
   direct = case _ of
     ObsDealt { handSizes, ownHand } ->
       let
-        sized = case knowledge of Knowledge k -> Knowledge (k { handSizes = handSizes })
+        sized = withHandSizes handSizes knowledge
       in
         case ownHand of
           Nothing -> sized
@@ -94,25 +97,18 @@ learn (Tuple source observation) knowledge =
     -- *before* the reveal.
     ObsAccused _ -> knowledge
 
-saturate :: EventId -> Knowledge -> Knowledge
-saturate source knowledge =
-  let
-    next = saturateOnce source knowledge
-  in
-    if next == knowledge then knowledge else saturate source next
+-- | Kibitzer's rules and residue refinement, packaged for `Jtms.Engine`.
+engine :: Engine.Engine Residue Claim Rule EventId
+engine =
+  { rules: allRules <#> \rule kb ->
+      rule (Knowledge kb) <#> \d ->
+        { claim: d.claim, rule: d.rule, premises: d.premises, anchors: d.origins }
+  , refine: \kb r ->
+      r { disjunctions = map (pruneOne (Knowledge kb)) r.disjunctions }
+  }
 
-saturateOnce :: EventId -> Knowledge -> Knowledge
-saturateOnce source knowledge =
-  let
-    pruned = pruneDisjunctions knowledge
-    derived = Array.concatMap (\rule -> rule pruned) allRules
-  in
-    foldl
-      ( \k { claim, rule, origins, premises } ->
-          addFact { claim, justification: { rule, source, origins, premises } } k
-      )
-      pruned
-      derived
+saturate :: EventId -> Knowledge -> Knowledge
+saturate source (Knowledge kb) = Knowledge (Engine.saturate engine source kb)
 
 -- | Fixed application order — part of the observable spec (see module doc).
 allRules :: Array (Knowledge -> Array Derived)
@@ -128,28 +124,28 @@ allRules =
   , ruleEnvelopeExcludesHands
   ]
 
--- | Shrink every unresolved disjunction: a candidate the shower is known
+-- | Shrink an unresolved disjunction: a candidate the shower is known
 -- | to lack, or known to be held by *someone else*, cannot be the card
 -- | that was shown. Mark the disjunction resolved once the shower is known
 -- | to hold one of its candidates.
-pruneDisjunctions :: Knowledge -> Knowledge
-pruneDisjunctions knowledge@(Knowledge k) =
-  Knowledge (k { disjunctions = map prune k.disjunctions })
-  where
-  prune whole@(Disjunction d)
-    | d.resolved = whole
-    | otherwise =
-        let
-          othersHold = Set.unions (Map.values (Map.filterKeys (_ /= d.player) k.holds))
-          impossible c = Set.member c (lacksOf knowledge d.player) || Set.member c othersHold
-          candidates = Set.filter (not <<< impossible) d.candidates
-          resolved = not (Set.isEmpty (Set.intersection candidates (holdsOf knowledge d.player)))
-        in
-          Disjunction (d { candidates = candidates, resolved = resolved })
+pruneOne :: Knowledge -> Disjunction -> Disjunction
+pruneOne knowledge whole@(Disjunction d)
+  | d.resolved = whole
+  | otherwise =
+      let
+        othersHold = heldEntries knowledge
+          # Array.filter (\(p /\ _) -> p /= d.player)
+          # map (\(_ /\ cards) -> cards)
+          # Set.unions
+        impossible c = Set.member c (lacksOf knowledge d.player) || Set.member c othersHold
+        candidates = Set.filter (not <<< impossible) d.candidates
+        resolved = not (Set.isEmpty (Set.intersection candidates (holdsOf knowledge d.player)))
+      in
+        Disjunction (d { candidates = candidates, resolved = resolved })
 
 ruleSingletonDisjunction :: Knowledge -> Array Derived
-ruleSingletonDisjunction knowledge@(Knowledge k) =
-  k.disjunctions # Array.mapMaybe case _ of
+ruleSingletonDisjunction knowledge =
+  disjunctions knowledge # Array.mapMaybe case _ of
     Disjunction d
       | not d.resolved, Set.size d.candidates == 1, Just c <- Set.findMin d.candidates ->
           Just
@@ -165,26 +161,26 @@ ruleSingletonDisjunction knowledge@(Knowledge k) =
 -- | The fact that ruled a candidate out of a disjunction: the shower is
 -- | known to lack it, or someone else is known to hold it.
 pruneEvidence :: Knowledge -> PlayerId -> Card -> Maybe FactId
-pruneEvidence knowledge@(Knowledge k) player c =
+pruneEvidence knowledge player c =
   case factIdFor (Lacks player c) knowledge of
     Just fid -> Just fid
     Nothing ->
       Array.findMap (\q -> factIdFor (Holds q c) knowledge)
-        (Array.filter (_ /= player) (allPlayers k.playerCount))
+        (Array.filter (_ /= player) (allPlayers (playerCountOf knowledge)))
 
 ruleUniqueOwner :: Knowledge -> Array Derived
-ruleUniqueOwner knowledge@(Knowledge k) = do
+ruleUniqueOwner knowledge = do
   p /\ held <- heldEntries knowledge
   c <- Set.toUnfoldable held
   let premises = Array.fromFoldable (factIdFor (Holds p c) knowledge)
   let excludeOthers q = { claim: Lacks q c, rule: UniqueOwner, origins: [], premises }
   Array.cons
     { claim: NotInEnvelope c, rule: UniqueOwner, origins: [], premises }
-    (map excludeOthers (Array.filter (_ /= p) (allPlayers k.playerCount)))
+    (map excludeOthers (Array.filter (_ /= p) (allPlayers (playerCountOf knowledge))))
 
 ruleHandComplete :: Knowledge -> Array Derived
-ruleHandComplete knowledge@(Knowledge k) = do
-  p /\ size <- Map.toUnfoldable k.handSizes :: Array (PlayerId /\ Int)
+ruleHandComplete knowledge = do
+  p /\ size <- Map.toUnfoldable (handSizesOf knowledge) :: Array (PlayerId /\ Int)
   let held = holdsOf knowledge p
   guard (Set.size held == size)
   let premises = holdsPremises knowledge p held
@@ -197,13 +193,13 @@ holdsPremises knowledge p held =
   Array.mapMaybe (\c -> factIdFor (Holds p c) knowledge) (Set.toUnfoldable held)
 
 ruleLastCandidateHand :: Knowledge -> Array Derived
-ruleLastCandidateHand knowledge@(Knowledge k) = do
+ruleLastCandidateHand knowledge = do
   c <- Set.toUnfoldable (envelopeOut knowledge)
   guard (not (Set.member c (heldByAnyone knowledge)))
-  case Array.filter (\p -> not (Set.member c (lacksOf knowledge p))) (allPlayers k.playerCount) of
+  case Array.filter (\p -> not (Set.member c (lacksOf knowledge p))) (allPlayers (playerCountOf knowledge)) of
     [ p ] ->
       let
-        excluded = Array.filter (_ /= p) (allPlayers k.playerCount)
+        excluded = Array.filter (_ /= p) (allPlayers (playerCountOf knowledge))
         premises =
           Array.fromFoldable (factIdFor (NotInEnvelope c) knowledge)
             <> Array.mapMaybe (\q -> factIdFor (Lacks q c) knowledge) excluded
@@ -226,8 +222,8 @@ ruleLastCandidateHand knowledge@(Knowledge k) = do
 -- | (any watcher family survives, pruned but disjoint, into every
 -- | better-informed view).
 ruleDisjunctionCapacity :: Knowledge -> Array Derived
-ruleDisjunctionCapacity knowledge@(Knowledge k) = do
-  p /\ size <- Map.toUnfoldable k.handSizes :: Array (PlayerId /\ Int)
+ruleDisjunctionCapacity knowledge = do
+  p /\ size <- Map.toUnfoldable (handSizesOf knowledge) :: Array (PlayerId /\ Int)
   let held = holdsOf knowledge p
   let free = size - Set.size held
   guard (free > 0)
@@ -238,7 +234,7 @@ ruleDisjunctionCapacity knowledge@(Knowledge k) = do
             Just { candidates: d.candidates, source: d.source }
           _ -> Nothing
       )
-      k.disjunctions
+      (disjunctions knowledge)
     pools = Array.nub (map _.candidates unresolved)
   case reachableUnion free pools of
     Nothing -> []
@@ -278,7 +274,7 @@ familyUnions k pools = case Array.uncons pools of
 -- | exhausted: both cards are in hands, and neither is in the envelope.
 -- | (The k=3 generalisation exists; pairs already close most of the gap.)
 ruleDisjunctionPigeonhole :: Knowledge -> Array Derived
-ruleDisjunctionPigeonhole (Knowledge k) = do
+ruleDisjunctionPigeonhole knowledge = do
   let
     narrow = Array.mapMaybe
       ( case _ of
@@ -286,7 +282,7 @@ ruleDisjunctionPigeonhole (Knowledge k) = do
             Just { player: d.player, candidates: d.candidates, source: d.source }
           _ -> Nothing
       )
-      k.disjunctions
+      (disjunctions knowledge)
   Tuple i first <- Array.mapWithIndex Tuple narrow
   second <- Array.drop (i + 1) narrow
   guard (first.player /= second.player)
@@ -301,12 +297,12 @@ ruleDisjunctionPigeonhole (Knowledge k) = do
     }
 
 ruleEnvelopeByElimination :: Knowledge -> Array Derived
-ruleEnvelopeByElimination knowledge@(Knowledge k) = do
+ruleEnvelopeByElimination knowledge = do
   c <- allCards
-  guard (Array.all (\p -> Set.member c (lacksOf knowledge p)) (allPlayers k.playerCount))
+  guard (Array.all (\p -> Set.member c (lacksOf knowledge p)) (allPlayers (playerCountOf knowledge)))
   let
     premises = Array.mapMaybe (\p -> factIdFor (Lacks p c) knowledge)
-      (allPlayers k.playerCount)
+      (allPlayers (playerCountOf knowledge))
   pure { claim: InEnvelope c, rule: EnvelopeByElimination, origins: [], premises }
 
 -- | The envelope holds exactly one card per category, counted both ways:
@@ -336,14 +332,11 @@ ruleCategoryCount knowledge = lastOneIn <> siblingsOut
     pure { claim: NotInEnvelope sibling, rule: CategoryCount, origins: [], premises }
 
 ruleEnvelopeExcludesHands :: Knowledge -> Array Derived
-ruleEnvelopeExcludesHands knowledge@(Knowledge k) = do
+ruleEnvelopeExcludesHands knowledge = do
   c <- Set.toUnfoldable (envelopeIn knowledge)
   let premises = Array.fromFoldable (factIdFor (InEnvelope c) knowledge)
-  p <- allPlayers k.playerCount
+  p <- allPlayers (playerCountOf knowledge)
   pure { claim: Lacks p c, rule: EnvelopeExcludesHands, origins: [], premises }
-
-heldEntries :: Knowledge -> Array (PlayerId /\ Set Card)
-heldEntries (Knowledge k) = Map.toUnfoldable k.holds
 
 -- | The mind of a perspective after the first n events.
 knowledgeAt :: PlayerCount -> Perspective -> Int -> Log -> Knowledge

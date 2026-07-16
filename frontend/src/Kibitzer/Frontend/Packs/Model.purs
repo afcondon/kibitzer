@@ -50,7 +50,7 @@ import Hylograph.ForceEngine.Simulation (SimulationNode)
 import Kibitzer.Cards (Card, allCards)
 import Data.String as String
 import Kibitzer.Describe (cardPhrase, describeFact, eventRef, playerName)
-import Kibitzer.Knowledge (Claim(..), Disjunction(..), Knowledge(..), envelopeIn, envelopeOut, facts, holdsOf, lacksOf)
+import Kibitzer.Knowledge (Claim(..), Disjunction(..), Knowledge, disjunctions, envelopeIn, envelopeOut, facts, holdsOf, lacksOf)
 import Kibitzer.Player (PlayerCount, PlayerId(..), allPlayers, playerCountToInt)
 
 type PackRow = (loc :: Int, card :: Int, ax :: Number, ay :: Number)
@@ -177,7 +177,6 @@ deriveStates count knowledge =
     let state = possState count knowledge loc c
     pure (nodeId loc card /\ { state, tip: tipFor loc c state })
   where
-  Knowledge k = knowledge
 
   tipFor loc c = case _ of
     -- an orbiting candidate explains why it left the pack
@@ -201,7 +200,7 @@ deriveStates count knowledge =
             ( \(Disjunction d) ->
                 not d.resolved && d.player == PlayerId loc && Set.member c d.candidates
             )
-            k.disjunctions
+            (disjunctions knowledge)
           of
           [] -> Nothing
           ds -> Just
@@ -240,8 +239,8 @@ survivorIds count knowledge =
 -- | Per seat, the card indexes sitting in unresolved disjunctions —
 -- | these orbit the pack.
 orbitSets :: Knowledge -> Map Int (Set Int)
-orbitSets (Knowledge k) =
-  Array.foldl step Map.empty k.disjunctions
+orbitSets knowledge =
+  Array.foldl step Map.empty (disjunctions knowledge)
   where
   step acc (Disjunction d)
     | d.resolved = acc

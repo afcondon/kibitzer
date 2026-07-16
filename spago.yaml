@@ -2,6 +2,8 @@ workspace:
   packageSet:
     registry: 73.3.0
   extraPackages:
+    jtms-core:
+      path: ../purescript-jtms/core
     hylograph-selection:
       path: ../purescript-hylograph-libs/purescript-hylograph-selection
     hylograph-transitions:
