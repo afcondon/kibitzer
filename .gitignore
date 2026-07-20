@@ -16,3 +16,4 @@ smt/trace-*.json
 smt/__pycache__/
 docs/*.pdf
 smt/bettor-validation.log
+.direnv/
