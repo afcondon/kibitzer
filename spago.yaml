@@ -4,8 +4,6 @@ workspace:
   extraPackages:
     baskerville-core:
       path: ../purescript-baskerville/core
-    baskerville-conformance:
-      path: ../purescript-baskerville/conformance
     mycroft:
       path: ../purescript-mycroft/mycroft
     baskerville-mycroft:
