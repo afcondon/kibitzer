@@ -7,7 +7,7 @@ workspace:
     mycroft:
       path: ../purescript-mycroft
     baskerville-mycroft:
-      path: ../purescript-mycroft/baskerville-mycroft
+      path: ../purescript-baskerville-mycroft
     hylograph-selection:
       path: ../purescript-hylograph-libs/purescript-hylograph-selection
     hylograph-transitions:
