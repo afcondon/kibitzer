@@ -10,7 +10,7 @@ package:
     - arrays
     - baskerville-core
     - baskerville-mycroft
-    - baskerville-testkit
+    - baskerville-conformance
     - console
     - effect
     - either

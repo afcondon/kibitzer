@@ -21,7 +21,7 @@ module Kibitzer.Smt.Theory
 
 import Prelude
 
-import Baskerville.Oracle.Smt (SmtTheory)
+import Baskerville.Conformance.Smt (SmtTheory)
 import Data.Array as Array
 import Data.Int as Int
 import Data.Map (Map)

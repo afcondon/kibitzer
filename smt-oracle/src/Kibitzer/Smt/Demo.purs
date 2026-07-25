@@ -15,7 +15,7 @@ import Prelude
 
 import Baskerville.Explain (explain)
 import Baskerville.Kernel (KB, Why(..), isKnown, knownClaims)
-import Baskerville.Oracle.Smt (Session, countermodel, entailed, newSession, whyEntailed)
+import Baskerville.Conformance.Smt (Session, countermodel, entailed, newSession, whyEntailed)
 import Data.Array as Array
 import Data.Foldable (foldM)
 import Data.Maybe (Maybe(..))

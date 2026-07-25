@@ -9,8 +9,8 @@ module Test.Smt.Main (main) where
 import Prelude
 
 import Baskerville.Kernel (knownClaims)
-import Baskerville.Oracle.Smt (consistent, explainOr, gap, newSession, unsound, whyEntailed)
-import Baskerville.Testkit (Refutation(..))
+import Baskerville.Conformance.Smt (consistent, explainOr, gap, newSession, unsound, whyEntailed)
+import Baskerville.Conformance (Refutation(..))
 import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Foldable (for_)
