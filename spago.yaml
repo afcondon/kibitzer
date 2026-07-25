@@ -5,7 +5,7 @@ workspace:
     baskerville-core:
       path: ../purescript-baskerville
     mycroft:
-      path: ../purescript-mycroft/mycroft
+      path: ../purescript-mycroft
     baskerville-mycroft:
       path: ../purescript-mycroft/baskerville-mycroft
     hylograph-selection:
