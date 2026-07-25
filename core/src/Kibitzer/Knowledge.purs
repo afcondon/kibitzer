@@ -1,7 +1,7 @@
 -- | What a perspective knows, and how it knows it.
 -- |
 -- | Since the jtms-port: the fact feed, hash-consing, and proof terms live
--- | in `jtms-core` (the library kibitzer's engine was extracted into), and
+-- | in `baskerville-core` (the library kibitzer's engine was extracted into), and
 -- | this module is the domain facade over it. The `Claim`/`Rule`/
 -- | `Justification`/`Fact` shapes the rest of kibitzer consumes are
 -- | unchanged; conversions happen at this module's boundary. Kibitzer's
@@ -55,9 +55,9 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested (type (/\), (/\))
-import Jtms.Kernel (FactId(..), KB, Why(..)) as ReExport
-import Jtms.Kernel (FactId, KB, Why(..), emptyKB, knownClaims, residue, withResidue)
-import Jtms.Kernel as JK
+import Baskerville.Kernel (FactId(..), KB, Why(..)) as ReExport
+import Baskerville.Kernel (FactId, KB, Why(..), emptyKB, knownClaims, residue, withResidue)
+import Baskerville.Kernel as JK
 import Kibitzer.Cards (Card(..), Room, Suspect, Weapon)
 import Kibitzer.Event (EventId)
 import Kibitzer.Player (PlayerCount, PlayerId)

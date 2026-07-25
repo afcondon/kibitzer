@@ -6,7 +6,7 @@ package:
     The watcher never sees a card; the facts add up anyway.
   dependencies:
     - arrays
-    - jtms-core
+    - baskerville-core
     - control
     - either
     - foldable-traversable

@@ -2,8 +2,14 @@ workspace:
   packageSet:
     registry: 77.13.1
   extraPackages:
-    jtms-core:
+    baskerville-core:
       path: ../purescript-jtms/core
+    baskerville-testkit:
+      path: ../purescript-jtms/testkit
+    mycroft:
+      path: ../purescript-mycroft/mycroft
+    baskerville-mycroft:
+      path: ../purescript-mycroft/baskerville-mycroft
     hylograph-selection:
       path: ../purescript-hylograph-libs/purescript-hylograph-selection
     hylograph-transitions:

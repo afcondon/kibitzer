@@ -3,7 +3,7 @@
 -- | over the same stream plus their private sightings. Same engine, same
 -- | rules — the only difference is what was witnessed.
 -- |
--- | Since the jtms-port the fixpoint machinery lives in `Jtms.Engine`; this
+-- | Since the jtms-port the fixpoint machinery lives in `Baskerville.Engine`; this
 -- | module supplies the domain: the deduction rules (in prim form — they
 -- | predate the library's eDSL and stay verbatim so the golden feeds do
 -- | too) and the residue refinement (`pruneDisjunctions`). Termination is
@@ -31,11 +31,11 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
-import Jtms.Engine as Engine
+import Baskerville.Engine as Engine
 import Kibitzer.Cards (Card, allCards, allCategories, cardsIn)
 import Kibitzer.Event (EventId, Log)
 import Kibitzer.Knowledge (Claim(..), Disjunction(..), Knowledge(..), Residue, Rule(..), addDisjunction, addFact, disjunctions, envelopeIn, envelopeOut, factIdFor, handSizesOf, heldByAnyone, heldEntries, holdsOf, lacksOf, playerCountOf, toWhy, withHandSizes, emptyKnowledge)
-import Jtms.Kernel (FactId)
+import Baskerville.Kernel (FactId)
 import Kibitzer.Observe (Observation(..), Perspective, observeLog)
 import Kibitzer.Player (PlayerCount, PlayerId, allPlayers)
 import Kibitzer.Suggestion (suggestionCards)
@@ -97,7 +97,7 @@ learn (Tuple source observation) knowledge =
     -- *before* the reveal.
     ObsAccused _ -> knowledge
 
--- | Kibitzer's rules and residue refinement, packaged for `Jtms.Engine`.
+-- | Kibitzer's rules and residue refinement, packaged for `Baskerville.Engine`.
 engine :: Engine.Engine Residue Claim Rule EventId
 engine =
   { rules: allRules <#> \rule kb ->

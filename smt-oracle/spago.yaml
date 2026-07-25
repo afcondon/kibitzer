@@ -1,0 +1,31 @@
+package:
+  name: kibitzer-smt
+  description: >
+    The watcher meets the oracle, natively: Cluedo as an SmtTheory over
+    Baskerville's SMT-backed ⊨ seam. Replaces the Python bettor — the
+    gap measured in-process, countermodels as full alternate deals, and
+    two grounding stories (proof leaves vs unsat cores) side by side.
+  dependencies:
+    - aff
+    - arrays
+    - baskerville-core
+    - baskerville-mycroft
+    - baskerville-testkit
+    - console
+    - effect
+    - either
+    - foldable-traversable
+    - integers
+    - kibitzer-core
+    - maybe
+    - mycroft
+    - ordered-collections
+    - prelude
+    - strings
+    - tuples
+  run:
+    main: Kibitzer.Smt.Demo
+  test:
+    main: Test.Smt.Main
+    dependencies:
+      - assert
