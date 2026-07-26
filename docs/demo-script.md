@@ -9,7 +9,10 @@ single card can, from the public metadata alone, deduce the murder —
 often before the players do. And the little library that lets it do that
 generically is the real subject.
 
-**Pipeline:** scripted browser capture (Kibitzer on :3026) · Specimen
+**Pipeline:** scripted browser capture of the restructured app — a
+three-pane spine **Game → Baskerville → Mycroft**, all on one seed
+(768896), paced by the in-app **discovery stepper** (step to the next
+*deduction*, not the next event) rather than a metronome · Specimen
 renders of the published libraries · terminal + static-page captures for
 the examples · typographic academic cards · assembled in ffmpeg (iMovie
 optional polish). Narration voice: TBD.
@@ -18,10 +21,13 @@ optional polish). Narration voice: TBD.
 
 ## ACT 1 — The kibitzer
 
-**Scene.** *Stylised setup animation: Cluedo pieces placed, the deck
-dealt out to six players and three cards sealed into the envelope.*
-*(App-work note: this deal animation likely needs building — it is not
-in the app today.)*
+**Scene.** *Stylised Saul-&-Elaine-Bass cold open: the six suspect pieces
+take their places around the board, the deck deals out to the six players
+(the real 768896 hands flipping face-up), and three cards seal — face-down,
+never shown — into the envelope at the centre. Kinetic type carries the
+premise over the action; on the word "watcher," a giant Bass eye opens.*
+*(Asset in production as a self-contained HTML/SVG animation —
+`video/opening.html` — built for screen capture, not shipped in the app.)*
 
 > **narrator:**
 > Imagine a game of Cluedo — *Clue*, in the States — with an onlooker at
@@ -42,9 +48,11 @@ in the app today.)*
 > metadata. It takes a deductive engine to unpack the hidden information
 > leaking out of it.
 
-**Scene.** *Cut to the Kibitzer app, Game tab, seed 768896. Step through
-the plays — speed up through the middle game, then slow right down for
-the final moves. Watch the watcher's notebook fill, and watch the clock.*
+**Scene.** *Cut to the app, Game pane, seed 768896. Step through the plays
+with the transport — fast through the middle game, then slow right down
+for the final moves. The event stream stacks up newest-on-top in the
+middle; the watcher's wired notebook fills on the right, each new deduction
+lighting the premises it stood on. Watch it fill, and watch the clock.*
 
 > **narrator (over the finish):**
 > One move *before* a player stands up to make the winning accusation,
@@ -56,37 +64,46 @@ pins the full three-card solution one event earlier, after E102.)*
 
 ---
 
-## INTERLUDE — How often, and when
+## INTERLUDE — How often, and how it scales
 
-**Scene.** *A clean data card: the players × board grid animating in — a
-small-multiples strip of collapse curves, or a simple climbing bar per
-table size. (Numbers: Appendix B.)*
-
-> **narrator:**
-> How often does the silent watcher win? It depends entirely on the
-> table. With three players it almost never does — about one game in
-> thirty. But every extra player means more suggestions, more passes,
-> more shows — and more hidden information bleeding into the open. At six
-> players it cracks the full envelope in nearly a quarter of them — and
-> every single time it does, it gets there before the winning
-> accusation. More eyes, more talk — more surveillance.
-
-**Scene.** *The board toggles ON; the curves flatten, the win bars drop.*
+**Scene.** *A clean data card: a climbing bar per table size, 3 → 6
+players, animating in (or a small-multiples strip of collapse curves).
+(Numbers: Appendix B.)*
 
 > **narrator:**
-> Add the board — make a player walk to a room before they're allowed to
-> name it — and the leak narrows. The games run *longer*, but the
-> watcher does *worse*: its success drops by about a quarter — from
-> 23.5% to 17.7%. Movement is noise; the gossip is the signal.
+> How often does the silent watcher win? It scales with the table. Three
+> players and it almost never does — about one game in thirty. But every
+> extra player means more suggestions, more passes, more shows — more
+> hidden information bleeding into the open. Four players: one in twelve.
+> Five: one in seven. At six, it cracks the full envelope in nearly a
+> quarter of them — and every single time it does, it gets there before
+> the winning accusation. More eyes, more talk — more surveillance.
+>
+> The point isn't that the watcher *beats* the players. At a real table,
+> people get up and walk to rooms, the leak narrows, and a player usually
+> wins first. The point is that it extracts *any* certainty at all from
+> pure metadata — no card ever in its hand — and that the more the table
+> talks, the more it learns.
 
-*(Measured, 1,000 games per configuration — see Appendix B.)*
+**Scene.** *(Optional forward-tease.) A seventh, eighth, ninth, tenth
+chair slide in around the table.*
+
+> **narrator:**
+> Ten players around the same deck? We haven't run it yet — but every
+> reading points one way. The more the table talks, the less it can keep
+> secret.
+
+*(Measured, 1,000 games per table size — see Appendix B.)*
 
 ---
 
-## ACT 2 — The spy's-eye view (the Cascade)
+## ACT 2 — The spy's-eye view (the Baskerville pane)
 
-**Scene.** *Switch to the Cascade tab, same game. Now we replay it from
-the watcher's point of view — passes, shows, and the possibility "packs".*
+**Scene.** *Switch to the Baskerville pane, same game. Now we replay it
+from the watcher's point of view — passes, shows, and the possibility
+"packs" in orbit. Drive it with the **discovery stepper**: skip the routine
+passes, land on each real deduction, its premises lit and its callout
+naming it.*
 
 The opening moves (verbatim from the seed):
 
@@ -114,8 +131,9 @@ around D — an unresolved possibility.*
 > another player's hand. The third is shown to belong to nobody. And on
 > the very next event —
 
-**Scene.** *At E61, the possibility circles for Mrs. White all collapse
-onto D. A new fact crystallises.*
+**Scene.** *One press of the discovery stepper jumps straight to E61: the
+possibility circles for Mrs. White all collapse onto D, the premise
+hairlines light up, and the callout crystallises the new fact.*
 
 > **narrator:**
 > — the kibitzer knows, with certainty, that the card D showed, all
@@ -196,7 +214,7 @@ you bring him the facts, and he pronounces."*
 > the whole problem to a solver — z3 — and ask a single question: **is
 > there any world consistent with everything we've seen?**
 
-**Scene.** *The worlds visualizer (`worlds.html`). Open on the headline
+**Scene.** *The Mycroft pane, same seed 768896. Open on the headline
 number, then the log-paper collapse curve.*
 
 > **narrator:**
@@ -209,19 +227,24 @@ number, then the log-paper collapse curve.*
 > sample — and each pass and each show you saw collapses it further,
 > down the decades, until a single world is left standing.
 
-**Scene.** *The two markers on the collapse strip light up: the point
-where all surviving worlds agree on the envelope, and — earlier or later
-— the point Baskerville's forward rules reached the same answer.*
+**Scene.** *The marker on the collapse strip: the instant every surviving
+world agrees on the envelope — and the moment Baskerville's forward rules
+reach the same answer. On this seed they land on the *same* event (E102);
+the two markers coincide.*
 
 > **narrator:**
 > Two moments fall out of the same picture for free. The instant every
-> surviving world agrees on the envelope — that's the earliest anyone
-> *could* know: the solver's verdict. And on the same strip, the moment
-> Baskerville's forward rules caught up. The gap between them has a name.
+> surviving world agrees on the envelope — the earliest anyone *could*
+> know, the solver's verdict — and the moment Baskerville's forward rules
+> reach it. On this game they *coincide*: the rules are complete here,
+> they leave nothing on the table. But they need not — and when a gap
+> opens between them, that gap has a name.
 
 **Scene.** *The bridge — split screen. Left: a Baskerville fact with its
 `axiomsBehind`. Right: the same conclusion as a z3 **unsat core** over
-the named observations. A seam animates between them.*
+the named observations. A seam animates between them. (Optional inset for
+the "gap": `worlds-gap.html`, seed 42 — a game where the space is certain
+of five cards while the notebook has only four, so the gap is visible.)*
 
 > **narrator:**
 > A third small library sits z3 *behind* Baskerville's own seam — and
@@ -272,6 +295,7 @@ Run directly against the compiled engine (`Kibitzer.Game.simulate` +
 | Envelope solved "by Event 102" | full 3-card solution first known after E102 |
 | "Solved before the players" | player B accuses correctly at E103; watcher solves after E102 — a **one-event** photo finish (hence the Act-1 reword) |
 | Envelope identity | Mrs. Peacock · Knife · Lounge (so "White is not the murderer" holds) |
+| SMT (Mycroft) vs engine (Baskerville) | space and notebook agree on the envelope at **E102** — **no completeness gap** on this seed; the forward rules are complete here (from `worlds_trace.py`: optimal solve 103, engine solve 103) |
 
 ## Appendix B — the numbers (measured, not asserted)
 
@@ -293,17 +317,20 @@ solves at all, always gets there first.)*
 | **6** | **off** | **23.5** | 103.2 | 124.0 | **1.8** |
 | 6 | on | 17.7 | 128.5 | 115.3 | 1.6 |
 
-Three readings the Interlude scene sells:
+The Interlude sells one reading; two more are context.
 
-1. **More players ⇒ a far stronger watcher.** Solved rate climbs 3.1 % →
-   8.7 % → 15.1 % → **23.5 %** from 3 to 6 players (no board) — a roughly
-   eightfold jump. More suggestions, passes and shows = more leaked
-   metadata. (z = −13.4, p < 0.0001.)
-2. **The board protects the players — modestly.** Movement drops the
-   six-player rate from **23.5 % to 17.7 %** — about a quarter fewer, and
-   statistically real (z = 3.21, p = 0.0013), but *not* the halving the
-   earlier small samples suggested. Games run *longer* yet leak *less*:
-   movement is noise, the gossip is signal.
+1. **More players ⇒ a far stronger watcher — the whole story.** Solved
+   rate climbs 3.1 % → 8.7 % → 15.1 % → **23.5 %** from 3 to 6 players (no
+   board) — a roughly eightfold jump. More suggestions, passes and shows =
+   more leaked metadata. (z = −13.4, p < 0.0001.) This is the thesis: the
+   more the table talks, the more the silent watcher learns.
+2. **Context, not a beat: at a real table the players win.** Board-on,
+   the six-player rate drops from **23.5 % to 17.7 %** (z = 3.21,
+   p = 0.0013) and the games run longer — movement narrows the leak, and a
+   player usually solves first. The app now runs board-off and the film
+   drops the old "board protects the players" scene; the rows stay in the
+   table as measured context, and back the Interlude's honest caveat
+   ("the point isn't that it beats the players").
 3. **Even when it doesn't fully solve, it's guessing well.** Average
    envelope cards pinned rises to **1.8 of 3** at six players — the
    "educated guess before any player is certain."
@@ -327,25 +354,32 @@ weaker than 768896 (no full break). 768896 stays locked.
 
 ## Appendix C — asset checklist
 
-- [ ] Act 1 deal animation (**likely new app work**)
-- [ ] Kibitzer Game-tab capture, seed 768896 (speed-ramp to the finish)
-- [ ] Kibitzer Cascade-tab capture, seed 768896 (orbit → E61 collapse)
+- [~] Act 1 deal animation — **in production** as `video/opening.html`
+      (Bass-style, self-contained HTML/SVG for screen capture)
+- [ ] Game-pane capture, seed 768896 (speed-ramp to the finish; wired
+      notebook filling, event stack)
+- [ ] Baskerville-pane capture, seed 768896 (discovery-stepper walk →
+      the E61 orbit collapse + callout)
+- [ ] Mycroft-pane capture, seed 768896 (44.46 T headline → log-paper
+      collapse → agreement marker at E102) — **resolved**: embedded in-app,
+      regenerated via `make worlds` (`frontend/public/worlds-768896.html`)
+- [ ] Optional gap inset: `worlds-gap.html`, seed 42 (visible completeness gap)
 - [ ] Specimen renders: `Baskerville.Kernel`, `Baskerville.Rule`,
       `Baskerville.Explain` (regenerate the book; already exists at
       `code-typography/specimen/docs/baskerville/`)
 - [ ] Meeting terminal capture (`spago run -p baskerville-meeting`)
 - [ ] Sudoku `explain.html` (generate: `... -p baskerville-sudoku -- page`)
-- [ ] `worlds.html` collapse capture — **decide**: keep seed 33 (the
-      canonical 1,238-world render) or regenerate for 768896 (same 44 T
-      headline; needs the `smt/` Python+z3 sidecar)
 - [ ] Antecedents cards (from `purescript-baskerville/docs/antecedents.md`)
 - [ ] Outro card with the four registry links
 
-## Appendix D — known app-work blocker
+## Appendix D — resolved app-work blocker
 
-The example CLI (`spago run -p kibitzer-example -- <seed>`) currently
-hangs on every invocation: `curate` (`example/src/Skylines.purs:69`) is a
-top-level CAF that runs 200 games at module-import time, and
-`Example.Main` transitively imports it. Fix: thunk `curate` (or move the
-pool inside `runSkylines`/`runOrbits`). This also restores the app's own
-`stats` mode. The frontend is unaffected.
+**Fixed (2026-07-26).** The example CLI (`spago run -p kibitzer-example --
+<seed>`) used to hang on every invocation: `curate` was a top-level CAF
+running 200 games at module-import time (PureScript is strict), and
+`Example.Main` transitively imports it — so every subcommand paid for it.
+`curate` is now a thunk computed *inside* `runSkylines`/`runOrbits` (via a
+bind, so it stays in the action's closure rather than floating to a
+module-level CAF), and the pure render is split into
+`skylinesPage`/`orbitsPage`. `trace`/`stats`/`corpus` all run; this is
+what let us regenerate the Mycroft world-trace for 768896.
