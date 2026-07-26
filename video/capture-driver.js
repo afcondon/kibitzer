@@ -17,30 +17,32 @@
    ========================================================================== */
 window.KDEMO = (() => {
   // ---- retime these to the VO (milliseconds) --------------------------------
+  // Timed to VO take 4 (docs/vo-take4-final.md) — word-proportional
+  // per-beat lengths; fine sync is nudged in the edit.
   const T = {
-    holdAfterCut:   1200,  // let a page settle before narration lands
+    holdAfterCut:   1000,  // let a page settle before narration lands
     // 1 · Game — frame + hook (at the deal)
-    b1:            11000,  // "I built this… six players… a seventh presence."
-    b2:            12000,  // the metadata-privacy hook
+    b1:            30000,  // "I built this… six players… a seventh presence."
+    b2:            34000,  // the metadata-privacy hook
     // 2 · Game — mechanic (rides the fill), result, scaling
     gameFillFrom:      1,  // brisk fill starts here
-    gameFillStep:    260,  // ms per event through the midgame (covers B3)
+    gameFillStep:    270,  // ms per event through the midgame (~25s, covers B3)
     gameSlowFrom:     95,  // slow right down from here to the finish
-    gameSlowStep:    850,
-    b4Hold:         9000,  // hold on the completed notebook (the payoff)
-    b5:            16000,  // scaling — held on the Game view
+    gameSlowStep:    900,  // ~6s to the solve
+    b4Hold:        20000,  // hold on the completed notebook (the payoff)
+    b5:            44000,  // scaling — held on the Game view
     // 3 · Baskerville — the two views + the E61 chain
-    b6:            13000,  // the left view (possibilities), at the start
-    b7:             8000,  // the right view (deductions + why)
-    b8Hold:        11000,  // the E61 collapse + callout
-    b9:             8000,  // total solution (End)
+    b6:            39000,  // the left view — possibilities fade as we step
+    b7:            14000,  // the right view (deductions + why)
+    b8Hold:        36000,  // the E61 chain (hangs, then resolves)
+    b9:            14000,  // total solution (End)
     // 4 · Mycroft — collapse forward, then backward
-    b10:           11000,  // frame — Mycroft wraps Z3, every line a world
-    mycFwdStep:     1400,  // dn pace for the forward collapse
-    b11Hold:        8000,  // hold on solved (3 red columns)
-    b12:           13000,  // backward at E18 (Kitchen solid at ~67B)
+    b10:           26000,  // frame — Mycroft wraps Z3, every line a world
+    mycFwdStep:     2900,  // dn pace for the forward collapse (13 × ≈ 38s)
+    b11Hold:        3000,  // rest on solved (3 red columns)
+    b12:           39000,  // backward — E46 then E18 (Kitchen solid at ~67B)
     // 5 · the two-libraries close, then the silent end-card
-    b13Hold:       17000,  // held on the solved Mycroft frame
+    b13Hold:       33000,  // held on the solved Mycroft frame
     outroHold:      9000,  // the four packages (④ About colophon), no VO
   };
 
@@ -94,8 +96,10 @@ window.KDEMO = (() => {
 
     // ---- 3 · Baskerville: the two views + the E61 chain --------------------
     goTab(1); await sleep(T.holdAfterCut); press('start'); await sleep(400);
-    await sleep(T.b6 + T.b7);                          // B6 left view (possibilities), B7 right view / why
-    stepDeductionUntil('E61'); await sleep(T.b8Hold);  // B8: the collapse + callout
+    // B6: slowly step forward so possibilities visibly fade while described
+    for (let i = 0; i < 8; i++) { press('fwd'); await sleep(T.b6 / 8); }
+    await sleep(T.b7);                                 // B7 right view / hover-why (hold)
+    stepDeductionUntil('E61'); await sleep(T.b8Hold);  // B8: the chain resolves at E61
     press('end'); await sleep(T.b9);                   // B9: total solution
 
     // ---- 4 · Mycroft: collapse forward, then backward ---------------------
@@ -103,7 +107,8 @@ window.KDEMO = (() => {
     await sleep(T.b10);                                // B10 frame, at E71 (536 worlds)
     for (let i = 0; i < 13; i++) { iclick('dn'); await sleep(T.mycFwdStep); }  // B11 forward collapse
     iclick('be'); await sleep(T.b11Hold);             // land on solved (3 red columns)
-    iScrub(19); await sleep(T.b12);                   // B12 backward — E18 (Kitchen solid at ~67B)
+    iScrub(47); await sleep(T.b12 * 0.4);             // B12 backward — E46 (~2.6M, 3 solid)
+    iScrub(19); await sleep(T.b12 * 0.6);             // …to E18 (~67B, 1 solid: the Kitchen)
 
     // ---- 5 · the two-libraries close, held on the solved frame ------------
     iScrub(103); await sleep(T.b13Hold);              // back to solved; B13 close
