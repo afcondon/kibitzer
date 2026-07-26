@@ -41,6 +41,7 @@ import Kibitzer.Frontend.Component.TransportBar as TransportBar
 import Kibitzer.Frontend.Cascade.Layout (GridLayout(..))
 import Kibitzer.Frontend.Crossref as Crossref
 import Kibitzer.Frontend.Types (Discovery, Game, Tab(..), currentKnowledge, discoveries, maxPosition)
+import Kibitzer.Frontend.View.About (aboutPage)
 import Kibitzer.Frontend.View.Board (groundTruthPane)
 import Kibitzer.Frontend.View.Terminal (terminalPane)
 import Kibitzer.Cards (roomName, suspectName, weaponName)
@@ -169,8 +170,10 @@ handleAction = case _ of
     case st.game of
       Nothing -> pure unit
       Just game -> case pickDiscovery (discoveries game) st.position st.focused dir of
-        Nothing -> pure unit
         Just d -> H.modify_ _ { position = d.position, focused = Just d.factId, playing = false }
+        -- before the first deduction, or past the last: run to the matching
+        -- end of the timeline (Start / End) rather than sticking in place
+        Nothing -> moveTo (if dir < 0 then 0 else maxPosition game)
 
 -- | The next/previous discovery from where the cursor sits. If a fact is
 -- | already focused we move relative to it in the index; otherwise we jump
@@ -261,7 +264,7 @@ render st =
       [ infoBarEl "Baskerville amasses facts and deduces new ones from them — explaining every step of its reasoning." ]
     MycroftTab ->
       [ infoBarEl "Using the Z3 solver, Mycroft holds every solution still consistent with the facts it knows — whittling 44,460,928,512,000 possible deals down to just 1." ]
-    PlayTab -> []
+    _ -> []
 
   infoBarEl txt =
     HH.div [ HP.class_ (HH.ClassName "info-bar") ] [ HH.text txt ]
@@ -271,11 +274,13 @@ render st =
   -- seed is fixed, so the float (with its editable seed) is hidden there
   floatBlock = case st.tab of
     MycroftTab -> []
+    AboutTab -> []
     _ -> case st.game of
       Just game -> [ floatingControls st game ]
       Nothing -> []
 
   body = case st.tab of
+    AboutTab -> [ aboutPage ]
     MycroftTab ->
       [ HH.main [ HP.class_ (HH.ClassName "mycroft-pane") ]
           [ HH.iframe
@@ -431,9 +436,10 @@ header st =
         , HH.p [ HP.class_ (HH.ClassName "strap") ]
             [ HH.text "Two ways to deduce hidden facts — the PureScript libraries Baskerville and Mycroft." ]
         , HH.nav [ HP.class_ (HH.ClassName "tabs") ]
-            [ tabButton st PlayTab "① Game"
-            , tabButton st BaskervilleTab "② Baskerville"
-            , tabButton st MycroftTab "③ Mycroft"
+            [ tabButton st PlayTab 1 "Game"
+            , tabButton st BaskervilleTab 2 "Baskerville"
+            , tabButton st MycroftTab 3 "Mycroft"
+            , tabButton st AboutTab 4 "About"
             ]
         ]
     , HH.div [ HP.class_ (HH.ClassName "header-center") ]
@@ -447,17 +453,21 @@ header st =
             -- Mycroft pane is a self-contained iframe, so only the eye
             -- carries over there
             <> case st.game of
-                 Just game | st.tab /= MycroftTab ->
+                 Just game | st.tab /= MycroftTab && st.tab /= AboutTab ->
                    [ latestDerivation game st.position, sparkline game st.position ]
                  _ -> []
         )
     ]
 
-tabButton :: forall m. MonadAff m => State -> Tab -> String -> H.ComponentHTML Action Slots m
-tabButton st tab label =
+tabButton :: forall m. MonadAff m => State -> Tab -> Int -> String -> H.ComponentHTML Action Slots m
+tabButton st tab num label =
   HH.button
     [ HP.classes
         (map HH.ClassName (if st.tab == tab then [ "tab", "active" ] else [ "tab" ]))
     , HE.onClick \_ -> SetTab tab
     ]
-    [ HH.text label ]
+    -- a real CSS circle for the numeral (the Unicode ①②③ rendered squashed);
+    -- `currentColor` on the border tracks the tab's muted/active state
+    [ HH.span [ HP.class_ (HH.ClassName "tab-badge") ] [ HH.text (show num) ]
+    , HH.text label
+    ]

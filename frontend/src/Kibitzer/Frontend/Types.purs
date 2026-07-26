@@ -41,7 +41,7 @@ type Game =
   , allEdges :: Array CascadeEdge -- the complete premise DAG of the finished game
   }
 
-data Tab = PlayTab | BaskervilleTab | MycroftTab
+data Tab = PlayTab | BaskervilleTab | MycroftTab | AboutTab
 
 derive instance Eq Tab
 

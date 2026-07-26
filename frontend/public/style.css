@@ -107,6 +107,24 @@ h1 {
   border-bottom-color: var(--accent);
 }
 
+/* the page number as a real circle — the Unicode ①②③ rendered squashed.
+   currentColor tracks the tab's muted/active state. */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  margin-right: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .counter {
   display: flex;
   gap: 2rem;
@@ -664,6 +682,24 @@ h2 {
   font-size: 0.78rem;
   line-height: 1.55;
 }
+
+.prose a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.prose a:hover { border-bottom-color: var(--accent); }
+
+.package-list { list-style: none; padding: 0; margin: 0.5rem 0; }
+
+.package-list li {
+  margin-bottom: 0.75rem;
+  max-width: 64ch;
+  font-size: 0.9rem;
+}
+
+.package-list a { font-weight: 600; }
 
 .stats-table {
   border-collapse: collapse;
