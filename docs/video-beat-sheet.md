@@ -1,221 +1,201 @@
-# Kibitzer — video beat sheet (VO-first capture spec)
+# Kibitzer — video beat sheet (hybrid cut, VO-first)
 
-*Companion to [`demo-script.md`](demo-script.md). This is the
-capture-ready cut: the words to read, top to bottom, each mapped to the
-on-screen action I drive. Method: **VO-first** — you record the bold VO
-lines; I time a self-playing capture of the app to your actual segment
-durations; we assemble in ffmpeg with the trailer as opening credits.*
+*The working cut: **take 3's unscripted spine and first-person voice**
+(see [`vo-take3-free-transcript.md`](vo-take3-free-transcript.md)), with
+the **metadata-privacy hook** kept and the **hard facts** spliced back in
+from the scripted version. Read the **> VO** blocks; the `SHOT`/`ACTION`
+notes are for driving the app. Method is still VO-first: record these,
+send the audio, I retime the self-driver (`video/capture-driver.js`) to
+your read.*
 
 **Master state:** seed **768896**, six players, no board
 (`http://localhost:3026/?seed=768896&players=6`). Every per-event claim
-below is ground-truth-verified (see `demo-script.md` Appendix A).
+is ground-truth-verified (see [`demo-script.md`](demo-script.md) App. A).
 
-**Assets this cut uses (all in hand):** the trailer
-(`video/opening.html`), and the four app pages — ① Game, ② Baskerville,
-③ Mycroft, ④ About. The richer Act-3 montage (Specimen renders, the
-Meeting terminal, Sudoku `explain.html`) is **deferred to a v2** — noted
-at the end as optional B-roll.
+**On-screen flow (simpler than before):** trailer → ① Game (frame, hook,
+mechanic, result, scaling) → ② Baskerville (the two views + the E61 chain)
+→ ③ Mycroft (collapse forward, then backward) → the two-libraries close,
+held on Mycroft → a **silent** end-card of the four packages (④ About
+colophon). No narration over the antecedents — that beat is gone.
 
-**How to read this:** read only the **> VO** blocks, at a natural,
-unhurried pace, with a beat of silence between segments. Ignore the
-`ACTION`/`SHOT` notes — those are mine. One clean take per segment is
-ideal (we can splice); flubs are fine, just pause and redo the line.
+**Voice:** first person, unhurried, yours. The facts to *not* fudge are
+bolded in the notes: **Mrs. Peacock / the Knife / the Lounge**, **one
+move** before the win, **~a quarter** at six players, **44 trillion**
+exactly, **536** first shown, the **Kitchen still solid at 67 billion**,
+**three red columns** = the envelope.
 
 ---
 
 ## 0 · Opening credits — the trailer  (~37 s, no VO)
 
-`SHOT` The trailer plays start to finish (silent, or with light score —
-your call). It ends held on the **kibitzer.** wordmark, the red iris as
-the full stop, "A DEDUCTION FROM METADATA" beneath.
-
-*No narration over the trailer — it carries the premise kinetically. VO
-begins on the cut to the app. (If you'd rather narrate over it, segment
-B1 can be moved to play across the deal animation instead — tell me and
-I'll re-time.)*
+`SHOT` The trailer (`video/opening.html`) plays start to finish, silent
+(or light score). Ends held on the **kibitzer.** wordmark, the red iris
+as the full stop. VO begins on the cut to the app.
 
 ---
 
-## 1 · The watcher solves first  (① Game)
+## 1 · The frame, and the watcher  (① Game, at the deal)
 
-`SHOT` Hard cut from the wordmark to the app, **① Game**, seed 768896,
-at the deal (position 0): ground truth on the left, the empty notebook
-on the right, counters at 0 / 0.
+`SHOT` Cut to **① Game**, seed 768896, at the deal: the table and the
+envelope on the left, the empty notebook on the right.
 
-> **VO (B1):** Here's a single game of Cluedo. Six players — and a
-> seventh presence at the table that never sees one card. It only hears
-> the public talk: who suggests what, who passes, who shows. Watch its
-> notebook.
+> **VO (B1):** I built this little simulation of Cluedo to show off two
+> small libraries — both of them about deduction. Here's a game, freshly
+> dealt: six players, and three cards sealed in the envelope. And there's
+> a seventh presence at the table — an imaginary spy, our deduction
+> machine — that never sees a single card.
 
-`ACTION` Begin stepping the timeline. Speed-ramp: brisk through the
-opening and midgame (the grid fills, the event stack climbs), then slow
-right down for the final moves.
-
-> **VO (B2):** Every pass, every show, lands as fact. It never guesses.
-> And watch the clock —
-
-`ACTION` Step to the finish. Hold the instant the notebook completes
-(after E102), one event before the winning accusation at E103.
-
-> **VO (B3):** One move before a player stands up to win, the watcher's
-> notebook is already complete. Peacock, the Knife, the Lounge. The
-> onlooker who never touched a card got there first — by a single turn.
+> **VO (B2):** All it ever gets is the public talk: who suggests what,
+> who passes, who shows a card to whom. That's *metadata* — the same kind
+> of exhaust you leave with your phone records, or an encrypted
+> messenger's delivery receipts. The content stays private; the metadata
+> gives you away. Let's see what it can do with just that.
 
 ---
 
-## 2 · How often, and how it scales  (④ About — the numbers)
+## 2 · The mechanic, the result, the scaling  (① Game, stepping)
 
-`SHOT` Cut to **④ About**, scrolled to *How often the silent watcher
-wins* — the scaling table (3 → 6 players) in view.
+`ACTION` Step the timeline: brisk through the opening and midgame (the
+grid fills, the event stack climbs), then slow to the finish.
 
-> **VO (B4):** How often does it win outright? It scales with the table.
-> Three players, and it almost never does — about one game in thirty.
-> But every extra player means more suggestions, more passes, more
-> shows: more hidden information bleeding into the open. At six players,
-> it cracks the full envelope in nearly a quarter of them.
+> **VO (B3):** As the players move, the watcher writes down facts. The
+> simplest: when someone passes, they hold none of the three cards just
+> suggested. But once you've gathered enough, you can *deduce*. If someone
+> showed a card, they held one of those three — and if two of them get
+> ruled out elsewhere, you know the third. It forms a chain.
 
-> **VO (B5):** The point isn't that it beats the players — at a real
-> table someone usually wins first. The point is that it extracts *any*
-> certainty at all, from pure metadata, no card ever in its hand. The
-> more the table talks, the more it learns.
+`ACTION` Hold the instant the notebook completes (after **E102**), one
+event before the winning accusation at E103.
 
----
+> **VO (B4):** It never guesses — it only writes down what's forced. And
+> watch the clock: one move before a player stands up to win, the
+> watcher's notebook is already complete. Mrs. Peacock, the Knife, the
+> Lounge. The onlooker who never touched a card got there first — by a
+> single turn.
 
-## 3 · The spy's-eye view  (② Baskerville)
-
-`SHOT` Cut to **② Baskerville**, seed 768896, at the start (the packs
-intact on the left, the empty derivation orbit on the right).
-
-> **VO (B6):** Here's the same game from the watcher's side. Early on,
-> player D shows player A a card. Our spy can't see it — but it can note
-> one thing: D holds *one* of the three cards just named. Mrs. White,
-> the Wrench, or the Billiard Room. A disjunction, floated into orbit,
-> waiting.
-
-`ACTION` Step the discovery stepper forward to the D-shows event; the
-three candidate possibilities lift into orbit around D.
-
-> **VO (B7):** And there it sits — for fifty-odd moves — while the rest
-> of the table quietly closes every other door.
-
-`ACTION` One press of the discovery stepper → jump to **E61**: the
-Mrs. White possibilities collapse onto D, the premise hairlines light,
-the callout names the new fact.
-
-> **VO (B8):** Until, on one event, it resolves. The card D showed, all
-> those turns ago, was Mrs. White. And for free, one more fact: White
-> was never in the envelope. She isn't the murderer.
+> **VO (B5):** The idea isn't that it beats the players — at a real table
+> someone usually wins first, and it depends how well they play; these
+> are playing pretty randomly. But the number of players matters. More
+> players each start with fewer cards and make more suggestions — more
+> facts circulating, more leaking into the open. With three players it
+> almost never solves, about one game in thirty; at six, it cracks the
+> whole envelope in nearly a quarter of them. The more the table talks,
+> the more the silent watcher learns.
 
 ---
 
-## 4 · Baskerville — the library  (② Baskerville + ④ About)
+## 3 · The watcher's side  (② Baskerville)
 
-`SHOT` Hold on a single lit derivation in the orbit — a fact with its
-premises. Then cut to **④ About**, *Two libraries, two temperaments*.
+`SHOT` Cut to **② Baskerville**, seed 768896, at the start — the
+possibilities intact on the left, the empty derivation orbit on the right.
 
-> **VO (B9):** Nothing in this watcher knows the word "Cluedo." It never
-> learned the rules of the game — it learned how to hold a reason.
-> Underneath is Baskerville: a small library that records every fact
-> paired with the reason it holds, and grinds one rule set forward until
-> nothing new can be learned. Point at any conclusion and ask it *why*,
-> and it hands you the chain it stood on, all the way down to what was
-> actually seen. Cluedo, Sudoku, a meeting to schedule — the same
-> kernel, three rules and a page of code each.
+> **VO (B6):** Here's the same game from the watcher's side — two views
+> instead of the table. On the left, everything still possible: at the
+> start, anyone could hold any card, and any three could be in the
+> envelope. As the game goes, possibilities fade out; and the moment a
+> card's owner is pinned down, it drops out of everyone else's hands — and
+> if it's ruled out of *every* hand, it must be in the envelope.
+
+> **VO (B7):** On the right are the deductions themselves, each with its
+> reason. Hover any one — "F does not hold the Wrench" — and you can see
+> exactly why it's known.
+
+`ACTION` Step the discovery stepper to the early D-shows-A event; the
+three candidates lift into orbit around D. Then one press → jump to
+**E61**, where they collapse onto D and the callout names the fact.
+
+> **VO (B8):** Here's a chain playing out. Early on, D shows A a card — I
+> can't see it, but I know D holds one of these three: Mrs. White, the
+> Wrench, or the Billiard Room. It floats there, unresolved, for fifty-odd
+> moves — until the others quietly rule out the other two, and it snaps
+> shut: the card was Mrs. White. And for free, White was never in the
+> envelope — so she's not the murderer.
+
+`ACTION` Step to the end (the fully-derived orbit).
+
+> **VO (B9):** Step to the end, and in this game it's a total solution —
+> every card in every hand, and the three in the envelope, because one
+> determines the other.
 
 ---
 
-## 5 · Mycroft — the whole space at once  (③ Mycroft)
+## 4 · The other way  (③ Mycroft)
 
-`SHOT` Cut to **③ Mycroft**, seed 768896. It opens at **E71** — the
-first moment few enough worlds remain to draw them all: 536 rows, each a
+`SHOT` Cut to **③ Mycroft**, seed 768896. It opens at **E71** — the first
+moment few enough worlds remain to draw them all: 536 rows, each a
 complete world; a handful of columns already a single colour.
 
-> **VO (B10):** There's a second way, older and opposite in temperament.
-> Baskerville does the legwork, one fact at a time. Mycroft does none —
-> it hands the whole problem to a solver, Z3, and asks a single
-> question: is there any world still consistent with everything seen?
+> **VO (B10):** There's a completely different way to do this — one that
+> isn't so easily asked for its reasons: hand the whole problem to an SMT
+> solver, Z3, and just ask "is there any world still consistent with
+> everything we've seen?" That's what my other library, Mycroft, does —
+> it wraps Z3.
 
-> **VO (B11):** How many worlds? At the deal, forty-four trillion — far
-> too many to draw. This is the first moment few enough remain to show
-> them all: five hundred and thirty-six. Every row is one complete world
-> still standing. And look — several columns are already a single colour.
-> That card's owner is the same in every surviving world. It's already
-> known.
+> **VO (B11):** Every line here is one possible solution — one complete
+> world. At the deal there are forty-four trillion of them, exactly; you
+> can't draw that in a browser, so we join once few enough remain to fit
+> on screen — five hundred and thirty-six. Step forward, deduction by
+> deduction, and the space collapses, fast. And when three columns turn
+> *red* — the three cards known to be in the envelope — that's your
+> solution.
 
-`ACTION` **Step backward** — jump the scrubber to E46 (≈ 2.6 million
-worlds; three solid columns), then to **E18** (≈ 67 billion; a single
-solid column — the Kitchen). The grid dissolves to the big number; the
-pinned columns stay solid full-height.
+`ACTION` **Step backward** — scrubber to E46 (≈ 2.6 M worlds; three solid
+columns), then to **E18** (≈ 67 billion; one solid column — the Kitchen).
+The grid dissolves to the big number; the pinned columns stay solid.
 
-> **VO (B12):** And that isn't the space being small. Step back — to a
-> point where sixty-seven *billion* worlds still remain — and the
-> Kitchen's column is still solid. One card, fixed, across sixty-seven
-> billion possibilities. A column turning solid is the space settling a
-> fact — however vast it still is.
+> **VO (B12):** And here's the nice part — you can run it backward. You
+> still can't draw forty-four trillion worlds, but you can show something:
+> that at some point a card's owner is already fixed — because every line
+> in its column is a single colour. So we paint that column the player's
+> colour. Look — the Kitchen's column is solid even *here*, with
+> sixty-seven billion worlds still in play. That fact was locked long
+> before the space was ever small enough to see.
 
-`ACTION` **Step forward** through the deductions (the `Deduction ›`
-button in the pane) from E18 down the decades — columns lock one by one,
-the three envelope columns turn **red** — landing on the solved state at
+`ACTION` Step forward through the deductions to the solved state at
 **E102** (one world; all 21 columns solid, three of them red).
-
-> **VO (B13):** Now forward. Each pass and show collapses the space, and
-> the columns lock, one by one. And when a column turns *red* — that card
-> is in the envelope. Watch the three red columns. When they agree —
-> here, at E102 — the space itself has named the murderer: Peacock, the
-> Knife, the Lounge. The same answer Baskerville reached, at the very
-> same event. The forward rules left nothing on the table.
 
 ---
 
-## 6 · The argument, and the packages  (④ About — colophon)
+## 5 · The two libraries  (close, held on ③ Mycroft → silent end-card)
 
-`SHOT` Cut to **④ About**, the *Antecedents* section, then scroll to the
-ink end-card — the four packages.
+`SHOT` Hold on the solved Mycroft frame (one world; three red columns).
 
-> **VO (B14):** None of this is new. The truth-maintenance systems of the
-> eighties were taken apart, their machinery transplanted — the search
-> into Z3's engine, the labels into logic programming, the provenance
-> into databases. Every successor kept the machinery and buried the
-> explanations as plumbing. The written-up reason — the thing you
-> actually ship — is the piece still lying on the table. That's what
-> Baskerville picks up.
+> **VO (B13):** So both libraries reach the same answer, very differently.
+> Z3 is deterministic — it crunches the whole pile of facts at once and
+> pronounces a solution, if one exists. Baskerville works forward, a fact
+> at a time — but with the one real difference that it can tell you *how*
+> it knew. Which is the whole point when what you care about isn't just
+> the answer, but the reasoning: a build system, a course-scheduling
+> system, a logistics engine.
 
-`SHOT` Hold on the ink end-card: `baskerville-core`, `mycroft`,
-`baskerville-mycroft`, `mycroft-z3-wasm`, the eye above them.
-
-> **VO (B15):** Four small pieces, on the registry now. Baskerville, to
-> hold the reason. Mycroft, to certify it. To be continued.
+`SHOT` **No VO.** Cut to **④ About**, the ink end-card — hold on the four
+packages (`baskerville-core`, `mycroft`, `baskerville-mycroft`,
+`mycroft-z3-wasm`) with the eye above them. Optional light score; fade.
 
 ---
 
 ## Capture notes (mine)
 
-- I drive the app deterministically per the `ACTION` lines; the transport
-  is the floating control block (Play / Event / Deduction / Start / End),
-  the discovery stepper is `Deduction ›`.
-- Window: I'll standardise the browser size before the take so framing is
-  consistent across cuts.
-- VO-first: send me the recorded audio (or just the per-segment
-  durations B1–B14) and I'll build a self-playing timeline whose holds
-  and speed-ramps match your read, so the screen recording is one clean
-  pass.
+- Driven per the `ACTION` lines: transport is the floating control block;
+  the discovery stepper is `Deduction ›`; Mycroft is the same-origin
+  iframe (scrubber for the backward jumps, `Deduction ›` forward).
+- The scaling (B5) rides over the Game view — no cut to a stats table.
+- VO-first: send the audio (or per-segment durations B1–B13) and I retime
+  the driver's `T{}` block; the silent end-card just holds.
 
-## Your side (the record + capture)
+## Your side
 
-1. Record VO: read B1–B14 at a natural pace, silence between segments.
-   Quiet room, pop filter if you have one; one clean take per segment.
-2. Send me the audio. I finalise the capture timing to it.
-3. Screen-record the app once as it self-plays (QuickTime or ffmpeg
-   avfoundation — full-res, 60 fps if you can), plus a clean capture of
-   the trailer.
-4. I hand you the ffmpeg assembly (trailer → app, VO laid under,
-   cross-fades, titles) — or you assemble in iMovie against the beat IDs.
+1. Record B1–B13 at a natural pace (ideally clicking through the site as
+   you go — your beats will attach to what's on screen). Beat-by-beat or
+   clear pauses so I can split the audio.
+2. Send me the file → I transcribe (mini `:3200`), retime the driver.
+3. Screen-record one clean pass of `KDEMO.play()` + a clean pass of the
+   trailer; I hand you the ffmpeg assembly.
 
-## Deferred to v2 (optional B-roll, assets not yet made)
+## Deferred / optional B-roll (v2)
 
-- Specimen renders of `Baskerville.Kernel` / `Rule` / `Explain`
-  (regenerate the book at `code-typography/specimen/docs/baskerville/`).
-- The Meeting terminal transcript (`spago run -p baskerville-meeting`).
-- Sudoku `explain.html` (`... -p baskerville-sudoku -- page`).
-- The `worlds-gap.html` inset (seed 42 — a visible completeness gap) for
-  a "when they *don't* coincide" beat after B12.
+- Specimen renders of `Baskerville.Kernel` / `Rule` / `Explain`; the
+  Meeting terminal; Sudoku `explain.html`; the `worlds-gap.html` inset
+  (seed 42) for a "when they *don't* coincide" beat.
+- The antecedents material (JTMS/ATMS lineage) — lives on the About page
+  as text; kept out of the VO by choice.

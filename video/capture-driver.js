@@ -2,7 +2,7 @@
    KIBITZER — capture driver
    ----------------------------------------------------------------------------
    Drives the live app deterministically through the video beat sheet
-   (docs/video-beat-sheet.md, beats B1–B14) so the screen recording is one
+   (docs/video-beat-sheet.md, beats B1–B13) so the screen recording is one
    clean pass. Paste into the browser console on
    http://localhost:3026/?seed=768896&players=6  then run:  KDEMO.play()
 
@@ -19,26 +19,29 @@ window.KDEMO = (() => {
   // ---- retime these to the VO (milliseconds) --------------------------------
   const T = {
     holdAfterCut:   1200,  // let a page settle before narration lands
-    b1:             9000,  // "Here's a single game… watch its notebook."
-    gameFillStep:    280,  // pace of the brisk fill (ms per event)
-    gameFillFrom:      1,  // start fast-fill at this position
+    // 1 · Game — frame + hook (at the deal)
+    b1:            11000,  // "I built this… six players… a seventh presence."
+    b2:            12000,  // the metadata-privacy hook
+    // 2 · Game — mechanic (rides the fill), result, scaling
+    gameFillFrom:      1,  // brisk fill starts here
+    gameFillStep:    260,  // ms per event through the midgame (covers B3)
     gameSlowFrom:     95,  // slow right down from here to the finish
     gameSlowStep:    850,
-    b3Hold:         9000,  // hold on the completed notebook (the payoff)
-    b4:            14000,  // the scaling numbers (About)
-    b5:            12000,
-    b6:            13000,  // Baskerville: the disjunction floats
-    b7:             6000,  // "and there it sits…"
-    b8Hold:        10000,  // hold on the E61 collapse + callout
-    b9:            20000,  // the library idea (About)
-    b10:            9000,  // Mycroft intro (does no legwork)
-    b11:           12000,  // first enumerable frame — E71, 536 worlds; solid = known
-    backStep:       5000,  // hold at E46 (~2.6M worlds, 3 solid columns)
-    b12:           10000,  // hold at E18 (~67B worlds, 1 solid — the Kitchen)
-    mycroftStep:    1600,  // dwell between forward deduction jumps (columns lock; red = envelope)
-    b13Hold:       12000,  // hold on the solved state (E102: 21 solid, 3 red)
-    b14:           18000,  // antecedents
-    b15Hold:       10000,  // the four packages
+    b4Hold:         9000,  // hold on the completed notebook (the payoff)
+    b5:            16000,  // scaling — held on the Game view
+    // 3 · Baskerville — the two views + the E61 chain
+    b6:            13000,  // the left view (possibilities), at the start
+    b7:             8000,  // the right view (deductions + why)
+    b8Hold:        11000,  // the E61 collapse + callout
+    b9:             8000,  // total solution (End)
+    // 4 · Mycroft — collapse forward, then backward
+    b10:           11000,  // frame — Mycroft wraps Z3, every line a world
+    mycFwdStep:     1400,  // dn pace for the forward collapse
+    b11Hold:        8000,  // hold on solved (3 red columns)
+    b12:           13000,  // backward at E18 (Kitchen solid at ~67B)
+    // 5 · the two-libraries close, then the silent end-card
+    b13Hold:       17000,  // held on the solved Mycroft frame
+    outroHold:      9000,  // the four packages (④ About colophon), no VO
   };
 
   let speed = 1;
@@ -75,55 +78,40 @@ window.KDEMO = (() => {
     console.log('[KDEMO] start');
     await reset();
 
-    // ---- 1 · Game: the watcher solves first (B1–B3) ------------------------
+    // ---- 1 · Game: frame + the metadata hook (at the deal) -----------------
     await sleep(T.holdAfterCut);
-    await sleep(T.b1);                                  // B1 intro over the empty notebook
-    // B2: brisk fill, then slow to the finish
+    await sleep(T.b1 + T.b2);
+
+    // ---- 2 · Game: mechanic (over the fill), result, scaling ---------------
     let p = T.gameFillFrom;
-    for (; p < T.gameSlowFrom; p++) { press('fwd'); await sleep(T.gameFillStep); }
-    for (; !/^E102/.test(posText()); ) {               // slow run to the solve (after E102)
+    for (; p < T.gameSlowFrom; p++) { press('fwd'); await sleep(T.gameFillStep); }  // brisk fill (B3)
+    for (; !/^E102/.test(posText()); ) {               // slow run to the solve
       press('fwd'); await sleep(T.gameSlowStep);
-      if (/^—/.test(posText())) break;                 // safety
-      if (p++ > 130) break;
+      if (/^—/.test(posText()) || p++ > 130) break;    // safety
     }
-    await sleep(T.b3Hold);                              // B3: hold on the complete notebook
+    await sleep(T.b4Hold);                             // B4: hold on the complete notebook
+    await sleep(T.b5);                                 // B5: scaling, still on the Game view
 
-    // ---- 2 · The numbers (B4–B5) — About stats table -----------------------
-    goTab(3); await sleep(T.holdAfterCut);
-    scrollToText('How often the silent watcher wins');
-    await sleep(T.b4);
-    scrollToText('The point isn');                      // the eye call-out beat
-    await sleep(T.b5);
-
-    // ---- 3 · Baskerville: the E61 deduction (B6–B8) ------------------------
+    // ---- 3 · Baskerville: the two views + the E61 chain --------------------
     goTab(1); await sleep(T.holdAfterCut); press('start'); await sleep(400);
-    press('nextDed'); await sleep(T.b6);               // first real deduction (the disjunction is live)
-    await sleep(T.b7);                                 // B7 "and there it sits…"
-    stepDeductionUntil('E61');                          // land squarely on E61
-    await sleep(T.b8Hold);                              // hold on the collapse + callout
+    await sleep(T.b6 + T.b7);                          // B6 left view (possibilities), B7 right view / why
+    stepDeductionUntil('E61'); await sleep(T.b8Hold);  // B8: the collapse + callout
+    press('end'); await sleep(T.b9);                   // B9: total solution
 
-    // ---- 4 · Baskerville the library (B9) — About --------------------------
-    goTab(3); await sleep(T.holdAfterCut);
-    scrollToText('Two libraries, two temperaments');
-    await sleep(T.b9);
-
-    // ---- 5 · Mycroft: the whole space (B10–B13) ----------------------------
-    // opens at E71 (first enumerable, 536 worlds, ~8 columns already solid)
+    // ---- 4 · Mycroft: collapse forward, then backward ---------------------
     goTab(2); await waitIframe(); await sleep(T.holdAfterCut);
-    await sleep(T.b10 + T.b11);                        // B10–B11 intro + "solid = known"
-    iScrub(47); await sleep(T.backStep);               // B12: step back — E46 (~2.6M, 3 solid)
-    iScrub(19); await sleep(T.b12);                    // further back — E18 (~67B, 1 solid: Kitchen)
-    // B13: forward through the collapse — columns lock, envelope columns go red
-    for (let i = 0; i < 16; i++) { iclick('dn'); await sleep(T.mycroftStep); }
-    iclick('be'); await sleep(600);                    // land on solved (E102: 21 solid, 3 red)
-    await sleep(T.b13Hold);
+    await sleep(T.b10);                                // B10 frame, at E71 (536 worlds)
+    for (let i = 0; i < 13; i++) { iclick('dn'); await sleep(T.mycFwdStep); }  // B11 forward collapse
+    iclick('be'); await sleep(T.b11Hold);             // land on solved (3 red columns)
+    iScrub(19); await sleep(T.b12);                   // B12 backward — E18 (Kitchen solid at ~67B)
 
-    // ---- 6 · Antecedents + packages (B14–B15) — About ----------------------
+    // ---- 5 · the two-libraries close, held on the solved frame ------------
+    iScrub(103); await sleep(T.b13Hold);              // back to solved; B13 close
+
+    // ---- silent end-card: the four packages (④ About colophon) -----------
     goTab(3); await sleep(T.holdAfterCut);
-    scrollToText('Antecedents');
-    await sleep(T.b14);
-    scrollToText('The libraries');                      // the ink end-card
-    await sleep(T.b15Hold);
+    scrollToText('The libraries');
+    await sleep(T.outroHold);
 
     console.log('[KDEMO] done');
   }
