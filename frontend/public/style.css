@@ -826,6 +826,16 @@ h2 {
   padding-top: 0.7rem;
 }
 
+/* the watcher's eye as a big graphic call-out (no kicker rule) */
+.about .pull-eye {
+  border-top: none;
+  padding-top: 0;
+  width: 14rem;
+  margin: 0.6rem 0 1rem 2.2rem;
+}
+
+.about .pull-eye img { width: 100%; height: auto; display: block; }
+
 /* ---- the ink end-card ---- */
 .about .colophon {
   background: #141414;

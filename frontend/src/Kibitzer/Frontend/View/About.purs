@@ -64,6 +64,7 @@ the clock: on this seed the watcher pins all three envelope cards —
 Peacock, the Knife, the Lounge — one event before a player stands up and
 wins with them. The onlooker who never touched a card got there first, by
 a single turn."""
+        , pull "The onlooker who never touched a card got there first — by a single turn."
         , para
             """② Baskerville is the same game from the watcher's point of view,
 with the possibilities in orbit. Early on, player D shows player A a
@@ -101,6 +102,7 @@ hidden information bleeding into the open. From three players to six the
 solve rate jumps roughly eightfold. And whenever the watcher solves at
 all, it always gets there before the winning accusation: the accusation
 never teaches it the answer; it had it, or it didn't."""
+        , pullEye
         , para
             """The point isn't that the watcher beats the players. At a real table
 people get up and walk to the rooms they name, which narrows the leak —
@@ -130,7 +132,6 @@ the product: the explanation is the deliverable. Cluedo is one client in
 three rules and a page of code; a meeting scheduler, Sudoku, and a build
 graph are others — the surviving meeting slot arrives carrying the reason
 every other slot died."""
-        , pull "The explanation is the deliverable."
         , para
             """Mycroft does no legwork — named, like Sherlock's cleverer,
 sedentary brother, for pronouncing on facts others bring him. You hand
@@ -140,6 +141,7 @@ entire model space at once. Where Baskerville walks forward one fact at a
 time and can, in principle, fail to reach something that was nonetheless
 inevitable, the solver is complete by construction — if a card's place is
 forced, no consistent world disagrees."""
+        , pull "One proves why, in human terms; the other certifies that."
         , para
             """So the two are complements, not rivals. Baskerville is incremental,
 explanatory, and fast on a growing log — the right tool when you want the
@@ -266,6 +268,12 @@ para text = HH.p_ [ HH.text text ]
 -- | A pulled quote, floated as a magazine call-out.
 pull :: forall w a. String -> HH.HTML w a
 pull text = HH.blockquote [ HP.class_ (HH.ClassName "pull") ] [ HH.text text ]
+
+-- | The watcher's eye, floated big into the margin as a graphic call-out.
+pullEye :: forall w a. HH.HTML w a
+pullEye =
+  HH.figure [ HP.classes (map HH.ClassName [ "pull", "pull-eye" ]) ]
+    [ HH.img [ HP.src "eye.svg", HP.alt "the watcher" ] ]
 
 -- | The end-card: the four registry packages on ink ground, the eye as
 -- | the watcher's signature.
