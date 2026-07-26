@@ -1,5 +1,7 @@
 -- | The About page: what this is, the demo walkthrough in prose, the two
--- | libraries compared, and where they come from. Static prose; the
+-- | libraries compared, and where they come from. Static prose, set as an
+-- | editorial spread in the opening-title sequence's key (cream ground,
+-- | condensed display type, the six suspect pieces as marginalia). The
 -- | numbers are the measured values from `spago run -p kibitzer-example --
 -- | stats` (1,000 seeds/config) and the locked demo seed 768896.
 module Kibitzer.Frontend.View.About (aboutPage) where
@@ -12,8 +14,9 @@ import Halogen.HTML.Properties as HP
 
 aboutPage :: forall w a. HH.HTML w a
 aboutPage =
-  HH.main [ HP.class_ (HH.ClassName "prose") ]
-    [ section "The idea"
+  HH.main [ HP.classes (map HH.ClassName [ "prose", "about" ]) ]
+    [ masthead
+    , section "scarlett" "The idea"
         [ para
             """In Cluedo — Clue, in the States — three cards sit unseen in an
 envelope: the murderer, the weapon, the room. Players learn what they
@@ -27,6 +30,7 @@ word for someone who watches a card game over the players' shoulders.
 Our kibitzer is worse off than the classic one. It never sees a single
 card. Not a hand, not a shown card, nothing. All it gets is the
 metadata — who asked what, who passed, who showed something to whom."""
+        , pull "Content privacy is not metadata privacy."
         , para
             """And that turns out to be a lot. Three players pass on one
 suggestion: nine facts (each holds none of those three). Someone shows a
@@ -42,7 +46,7 @@ and your encrypted messenger's delivery receipts. Content privacy is not
 metadata privacy. That is the whole point of this toy — and the little
 libraries that do the deducing, generically, are the real subject."""
         ]
-    , section "What the demo shows"
+    , section "mustard" "What the demo shows"
         [ para
             """The three numbered pages replay one game — seed 768896, six
 players — three ways. Every game is a pure function of its seed, so the
@@ -84,7 +88,7 @@ free: the instant every surviving world agrees on the envelope. On this
 game it lands on the same event the notebook does, E102 — the forward
 rules leave nothing on the table here."""
         ]
-    , section "How often the silent watcher wins"
+    , section "green" "How often the silent watcher wins"
         [ para
             """Not always — and it scales with the table. Across a thousand
 seeded games per configuration (the watcher seeing zero cards throughout),
@@ -107,7 +111,7 @@ talks, the more it learns. Even when it falls short of a full solve, it is
 guessing well: at six players it has pinned, on average, 1.8 of the 3
 envelope cards by the end."""
         ]
-    , section "Two libraries, two temperaments"
+    , section "peacock" "Two libraries, two temperaments"
         [ para
             """Nothing in the watcher knows the word "Cluedo." It never learned
 the rules of the game — it learned how to hold a reason. Underneath are
@@ -126,6 +130,7 @@ the product: the explanation is the deliverable. Cluedo is one client in
 three rules and a page of code; a meeting scheduler, Sudoku, and a build
 graph are others — the surviving meeting slot arrives carrying the reason
 every other slot died."""
+        , pull "The explanation is the deliverable."
         , para
             """Mycroft does no legwork — named, like Sherlock's cleverer,
 sedentary brother, for pronouncing on facts others bring him. You hand
@@ -152,7 +157,7 @@ why, in human terms; the other certifies that, and keeps the first
 honest. It runs against a native Z3, or entirely in the browser, compiled
 to WebAssembly."""
         ]
-    , section "Antecedents"
+    , section "plum" "Antecedents"
         [ para
             """None of this is new. The core move belongs to the truth-maintenance
 systems of the eighties — Doyle's JTMS (1979), de Kleer's ATMS (1986):
@@ -179,7 +184,7 @@ the why."""
 actually ship, renderable and queryable and testable — is the piece still
 lying on the table. That is what Baskerville picks up."""
         ]
-    , section "Honesty"
+    , section "white" "Honesty"
         [ para
             """The engine is sound and very nearly complete. Its soundness — the
 notebook never lies, from any seat, at any moment — is enforced by
@@ -194,19 +199,88 @@ players suggest at random rather than strategically."""
             """Written in PureScript — a pure Halogen app over a pure game core,
 the world-space view enumerated by Z3. MIT licensed."""
         ]
-    , section "The libraries"
-        [ para "Published to the PureScript registry, in four small pieces:"
-        , packageList
+    , colophon
+    ]
+
+-- | The feature masthead: eyebrow, condensed title with the red full-stop,
+-- | a deck, and the six suspect pieces as a cast band.
+masthead :: forall w a. HH.HTML w a
+masthead =
+  HH.header [ HP.class_ (HH.ClassName "about-masthead") ]
+    [ HH.div [ HP.class_ (HH.ClassName "sec-inner") ]
+        [ HH.p [ HP.class_ (HH.ClassName "eyebrow") ] [ HH.text "A deduction from metadata" ]
+        , HH.h1 [ HP.class_ (HH.ClassName "feature-title") ]
+            [ HH.text "The silent watcher"
+            , HH.span [ HP.class_ (HH.ClassName "stop") ] [ HH.text "." ]
+            ]
+        , HH.p [ HP.class_ (HH.ClassName "feature-deck") ]
+            [ HH.text "An onlooker at a game of Cluedo who never sees a single card, deducing the murder from the public metadata alone — and the two small PureScript libraries that do the deducing." ]
+        , castBand
         ]
     ]
 
-section :: forall w a. String -> Array (HH.HTML w a) -> HH.HTML w a
-section title body =
+castBand :: forall w a. HH.HTML w a
+castBand =
+  HH.div [ HP.class_ (HH.ClassName "cast") ] (map member suspects)
+  where
+  member s =
+    HH.figure [ HP.class_ (HH.ClassName "cast-piece") ]
+      [ pawnImg s.file
+      , HH.figcaption_ [ HH.text s.name ]
+      ]
+  suspects =
+    [ { name: "Scarlett", file: "scarlett" }
+    , { name: "Mustard", file: "mustard" }
+    , { name: "White", file: "white" }
+    , { name: "Green", file: "green" }
+    , { name: "Peacock", file: "peacock" }
+    , { name: "Plum", file: "plum" }
+    ]
+
+-- | A titled section, marked in the margin by a suspect piece.
+section :: forall w a. String -> String -> Array (HH.HTML w a) -> HH.HTML w a
+section pawn title body =
   HH.section [ HP.class_ (HH.ClassName "prose-section") ]
-    (Array.cons (HH.h2_ [ HH.text title ]) body)
+    [ HH.div [ HP.class_ (HH.ClassName "sec-inner") ]
+        (Array.cons (sectionHead pawn title) body)
+    ]
+
+sectionHead :: forall w a. String -> String -> HH.HTML w a
+sectionHead pawn title =
+  HH.div [ HP.class_ (HH.ClassName "sec-head") ]
+    [ pawnImg pawn
+    , HH.h2_ [ HH.text title ]
+    ]
+
+pawnImg :: forall w a. String -> HH.HTML w a
+pawnImg file =
+  HH.img
+    [ HP.class_ (HH.ClassName "sec-piece")
+    , HP.src ("pieces/pawn-" <> file <> ".svg")
+    , HP.alt ""
+    ]
 
 para :: forall w a. String -> HH.HTML w a
 para text = HH.p_ [ HH.text text ]
+
+-- | A pulled quote, floated as a magazine call-out.
+pull :: forall w a. String -> HH.HTML w a
+pull text = HH.blockquote [ HP.class_ (HH.ClassName "pull") ] [ HH.text text ]
+
+-- | The end-card: the four registry packages on ink ground, the eye as
+-- | the watcher's signature.
+colophon :: forall w a. HH.HTML w a
+colophon =
+  HH.section [ HP.classes (map HH.ClassName [ "prose-section", "colophon" ]) ]
+    [ HH.div [ HP.class_ (HH.ClassName "sec-inner") ]
+        [ HH.div [ HP.class_ (HH.ClassName "sec-head") ]
+            [ HH.img [ HP.class_ (HH.ClassName "sec-piece"), HP.src "eye.svg", HP.alt "" ]
+            , HH.h2_ [ HH.text "The libraries" ]
+            ]
+        , para "Published to the PureScript registry, in four small pieces:"
+        , packageList
+        ]
+    ]
 
 -- | External link, opened in a new tab.
 plink :: forall w a. String -> String -> HH.HTML w a
