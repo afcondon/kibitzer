@@ -610,9 +610,10 @@ h2 {
   overflow: hidden;
 }
 
-.mycroft-note {
+/* one-line library caption under the header (Baskerville / Mycroft) */
+.info-bar {
   padding: 0.6rem 2rem;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--muted);
   border-bottom: 1px solid var(--hairline);
   background: var(--wash);

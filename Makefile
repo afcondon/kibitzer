@@ -53,7 +53,7 @@ worlds:
 	spago run --quiet -p kibitzer-example -- trace 42 > smt/trace-42.json
 	smt/.venv/bin/python smt/worlds_trace.py smt/trace-42.json > frontend/public/worlds-gap.html
 	spago run --quiet -p kibitzer-example -- trace 768896 --players 6 > smt/trace-768896.json
-	smt/.venv/bin/python smt/worlds_trace.py smt/trace-768896.json > frontend/public/worlds-768896.html
+	smt/.venv/bin/python smt/worlds_trace.py smt/trace-768896.json --embed > frontend/public/worlds-768896.html
 
 # The bettor page (EV over proof). BETTOR_SEED picks the featured game —
 # 11 is the corpus's best genuine call (wakes at 82% into an 82% hazard,

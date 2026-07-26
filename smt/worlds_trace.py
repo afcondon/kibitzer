@@ -93,6 +93,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("trace")
     ap.add_argument("--cap", type=int, default=1500)
+    ap.add_argument("--embed", action="store_true",
+                    help="omit the heading + intro prose (the page is shown "
+                         "inside the frontend's Mycroft pane, which captions "
+                         "it itself)")
     args = ap.parse_args()
     trace = json.load(open(args.trace))
     total = len(trace["events"])
@@ -233,6 +237,7 @@ def main():
         "estLog": [round(v, 3) for v in est_log],  # log10 counts, positions 0..p0
         "total0": total0,
         "pinned": pinned,  # per card: first position the space pins it, and where
+        "embed": args.embed,
     }
     print(render_page(data))
 
@@ -240,8 +245,12 @@ def main():
 def render_page(data):
     payload = json.dumps(data, separators=(",", ":"))
     n = data["players"]
+    # standalone pages carry a heading + intro; the embedded Mycroft pane
+    # is captioned by the frontend, so it omits the prose entirely
+    header = "" if data.get("embed") else HEADER_HTML
     return (
         PAGE_TEMPLATE
+        .replace("__HEADER__", header)
         .replace("__DATA__", payload)
         .replace("__SEED__", str(data["seed"]))
         .replace("__PLAYERS__", str(n))
@@ -250,6 +259,19 @@ def render_page(data):
         .replace("__NWORLDS__", f"{len(data['worlds']):,}")
         .replace("__TOTAL0__", f"{data['total0']:,}")
     )
+
+
+HEADER_HTML = r"""<h1>The model space</h1>
+<p class="intro">Seed __SEED__, __PLAYERS__ players. Every row is one complete world —
+an assignment of all 21 cards to hands and envelope — consistent with the public
+transcript; every column is a card, coloured by where that world puts it. Before
+__P0E__ the space is too big to show (__TOTAL0__ legal deals at the start, exactly — the
+dashed stretch of the curve is an estimate anchored at exact endpoints); from
+__P0E__ on, <em>every</em> consistent world is on the page — all __NWORLDS__ of
+them, the totality, not a sample. Each further event kills the worlds it
+contradicts. When a column goes monochrome, that card's place is certain — it gets
+a dot, and an ink ring once the watcher's notebook knows it too. When the three
+red columns agree, the space itself has solved the murder.</p>"""
 
 
 PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
@@ -290,6 +312,8 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
                     border: 1px solid var(--ink); background: #fff; cursor: pointer; }
  .controls button:hover { background: var(--ink); color: #fff; }
  .controls input[type=range] { flex: 1; accent-color: var(--accent); }
+ .controls .deduct-label { font-size: .68rem; text-transform: uppercase;
+                           letter-spacing: .06em; color: var(--muted); margin-left: .5rem; }
  .top { position: sticky; top: 0; z-index: 5; background: #fff;
         padding: .4rem 0 .5rem; border-bottom: 1px solid var(--hairline); }
  #chart { display: block; width: 100%; height: 96px; margin-top: .4rem;
@@ -299,17 +323,7 @@ PAGE_TEMPLATE = r"""<!doctype html><meta charset="utf-8">
  .legend i { display: inline-block; width: 10px; height: 10px; margin-right: .3rem;
              vertical-align: -1px; }
 </style>
-<h1>The model space</h1>
-<p class="intro">Seed __SEED__, __PLAYERS__ players. Every row is one complete world —
-an assignment of all 21 cards to hands and envelope — consistent with the public
-transcript; every column is a card, coloured by where that world puts it. Before
-__P0E__ the space is too big to show (__TOTAL0__ legal deals at the start, exactly — the
-dashed stretch of the curve is an estimate anchored at exact endpoints); from
-__P0E__ on, <em>every</em> consistent world is on the page — all __NWORLDS__ of
-them, the totality, not a sample. Each further event kills the worlds it
-contradicts. When a column goes monochrome, that card's place is certain — it gets
-a dot, and an ink ring once the watcher's notebook knows it too. When the three
-red columns agree, the space itself has solved the murder.</p>
+__HEADER__
 <div class="stage">
   <div class="top">
     <div class="rail">
@@ -321,6 +335,8 @@ red columns agree, the space itself has solved the murder.</p>
     <div class="controls">
       <button id="b0">⏮</button><button id="bb">◀</button>
       <button id="bp">▶</button><button id="bf">▶▶</button><button id="be">⏭</button>
+      <span class="deduct-label">deduction</span>
+      <button id="dp" title="previous card the space pinned">‹</button><button id="dn" title="next card the space pinned">›</button>
       <input type="range" id="scrub" min="0" step="1">
       <span class="count" id="pos"></span>
     </div>
@@ -619,6 +635,20 @@ document.getElementById("bb").onclick = () => { stop(); goTo(position - 1); };
 document.getElementById("bf").onclick = () => { stop(); goTo(position + 1); };
 document.getElementById("be").onclick = () => { stop(); goTo(D.total); };
 scrub.oninput = () => { stop(); goTo(+scrub.value); };
+
+// deduction stepper: jump between the positions where the space pins a
+// new card (a column goes monochrome) — the space's own "deductions",
+// the analogue of the notebook's derived facts on the Baskerville page
+const pinPositions = [...new Set(D.pinned.map(p => p.at).filter(a => a != null))]
+  .sort((a, b) => a - b);
+document.getElementById("dp").onclick = () => {
+  const c = [...pinPositions].reverse().find(p => p < position);
+  if (c != null) { stop(); goTo(c); }
+};
+document.getElementById("dn").onclick = () => {
+  const c = pinPositions.find(p => p > position);
+  if (c != null) { stop(); goTo(c); }
+};
 
 let player = null;
 const bp = document.getElementById("bp");

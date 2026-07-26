@@ -251,8 +251,21 @@ writeParamsToUrl seedInt players = do
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action Slots m
 render st =
   HH.div [ HP.class_ (HH.ClassName "app") ]
-    ([ header st ] <> floatBlock <> body)
+    ([ header st ] <> floatBlock <> infoBar <> body)
   where
+  -- a one-line strip under the header naming what the library on this
+  -- page does. The Game page speaks for itself (the notebook is the
+  -- library at work); the two engine pages get a caption.
+  infoBar = case st.tab of
+    BaskervilleTab ->
+      [ infoBarEl "Baskerville amasses facts and deduces new ones from them — explaining every step of its reasoning." ]
+    MycroftTab ->
+      [ infoBarEl "Using the Z3 solver, Mycroft holds every solution still consistent with the facts it knows — whittling 44,460,928,512,000 possible deals down to just 1." ]
+    PlayTab -> []
+
+  infoBarEl txt =
+    HH.div [ HP.class_ (HH.ClassName "info-bar") ] [ HH.text txt ]
+
   -- the transport drives the Game/Baskerville timeline; the Mycroft pane
   -- is a self-contained world-space view with its own stepping, and its
   -- seed is fixed, so the float (with its editable seed) is hidden there
@@ -265,9 +278,7 @@ render st =
   body = case st.tab of
     MycroftTab ->
       [ HH.main [ HP.class_ (HH.ClassName "mycroft-pane") ]
-          [ HH.p [ HP.class_ (HH.ClassName "mycroft-note") ]
-              [ HH.text "Seed 768896 — the world-space view is fixed to the pedagogical example." ]
-          , HH.iframe
+          [ HH.iframe
               [ HP.src "worlds-768896.html"
               , HP.class_ (HH.ClassName "worlds-frame")
               , HP.title "Mycroft — the SMT world space"
