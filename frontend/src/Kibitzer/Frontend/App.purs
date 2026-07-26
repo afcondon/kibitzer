@@ -16,6 +16,7 @@ import Prelude
 
 import Control.Monad.Rec.Class (forever)
 import Data.Array as Array
+import Data.Foldable (maximum)
 import Data.Int as Int
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -35,18 +36,16 @@ import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
 import Kibitzer.Cascade (cascadeTimeline)
 import Kibitzer.Frontend.Component.CascadeHost as CascadeHost
-import Kibitzer.Frontend.Component.ControlPanel as ControlPanel
 import Kibitzer.Frontend.Component.SeedControl as SeedControl
 import Kibitzer.Frontend.Component.TransportBar as TransportBar
 import Kibitzer.Frontend.Cascade.Layout (GridLayout(..))
 import Kibitzer.Frontend.Crossref as Crossref
 import Kibitzer.Frontend.Types (Discovery, Game, Tab(..), currentKnowledge, discoveries, maxPosition)
 import Kibitzer.Frontend.View.Board (groundTruthPane)
-import Kibitzer.Frontend.View.Feed (feedPane)
 import Kibitzer.Frontend.View.Terminal (terminalPane)
-import Kibitzer.Describe (describeFact)
+import Kibitzer.Describe (describeFact, describeSuggestion)
 import Kibitzer.Game (simulate)
-import Kibitzer.Knowledge (Fact, FactId(..), facts)
+import Kibitzer.Knowledge (Fact, FactId(..), envelopeIn, facts, solutionIfKnown)
 import Data.Set (Set)
 import Data.Set as Set
 import Kibitzer.Infer (knowledgeTimeline)
@@ -77,23 +76,21 @@ type State =
 data Action
   = Initialize
   | SetTab Tab
-  | HandleControls ControlPanel.Output
   | HandleSeed SeedControl.Output
   | HandleTransport TransportBar.Output
   | HandleCascade CascadeHost.Output
   | SetHover (Maybe Crossref.Hover)
+  | Scrub Int
   | Tick
 
 type Slots =
-  ( controls :: ControlPanel.Slot
-  , seed :: SeedControl.Slot
+  ( seed :: SeedControl.Slot
   , transport :: TransportBar.Slot
   , packs :: CascadeHost.Slot
   , orbits :: CascadeHost.Slot
   , notebook :: CascadeHost.Slot
   )
 
-_controls = Proxy :: Proxy "controls"
 _seed = Proxy :: Proxy "seed"
 _transport = Proxy :: Proxy "transport"
 _packs = Proxy :: Proxy "packs"
@@ -103,7 +100,7 @@ _notebook = Proxy :: Proxy "notebook"
 component :: forall q i o m. MonadAff m => H.Component q i o m
 component = H.mkComponent
   { initialState: \_ ->
-      { config: { seed: 42, players: 4, board: false }
+      { config: { seed: 42, players: 6, board: false }
       , game: Nothing
       , position: 0
       , playing: false
@@ -122,14 +119,10 @@ handleAction = case _ of
     params <- liftEffect readParamsFromUrl
     startGame
       { seed: fromMaybe 42 params.seed
-      , players: fromMaybe 4 params.players
+      , players: fromMaybe 6 params.players
       , board: false
       }
   SetTab tab -> H.modify_ _ { tab = tab, playing = false }
-  HandleControls output -> do
-    config <- H.gets _.config
-    case output of
-      ControlPanel.PlayersChanged n -> startGame config { players = n }
   HandleSeed output -> do
     config <- H.gets _.config
     case output of
@@ -151,6 +144,7 @@ handleAction = case _ of
     CascadeHost.ScrubRequested i -> moveTo i
     CascadeHost.HoverChanged h -> H.modify_ _ { hover = h }
   SetHover h -> H.modify_ _ { hover = h }
+  Scrub n -> moveTo n
   Tick -> do
     st <- H.get
     case st.game of
@@ -295,14 +289,12 @@ render st =
     PlayTab -> case st.game of
       Nothing -> [ HH.main_ [ HH.text "Dealing…" ] ]
       Just game ->
-        [ HH.main [ HP.class_ (HH.ClassName "split4") ]
+        [ HH.main [ HP.class_ (HH.ClassName "split3-game") ]
             [ tableColumn st game
             , terminalPane terminalHover (hoverEvents st game) game st.position
             , HH.slot _notebook unit CascadeHost.component
                 { game, position: st.position, packView: false, layout: TableView, hover: effectiveHover st }
                 HandleCascade
-            , HH.div [ HP.classes (map HH.ClassName [ "watcher-pane", "feed-col" ]) ]
-                [ feedPane game st.position ]
             ]
         ]
 
@@ -338,6 +330,48 @@ focusedFact st game = do
   fid <- st.focused
   Array.find (\f -> f.id == fid) (facts (currentKnowledge game st.position))
 
+-- | The single most-recent thing the watcher worked out, shown as a strip
+-- | above the notebook grid — the old "how the watcher knows" feed
+-- | distilled to its newest line.
+latestDerivation :: forall m. Game -> Int -> H.ComponentHTML Action Slots m
+latestDerivation game position =
+  HH.div [ HP.class_ (HH.ClassName "latest-line") ]
+    [ case Array.last (facts (currentKnowledge game position)) of
+        Nothing ->
+          HH.span [ HP.class_ (HH.ClassName "latest-empty") ]
+            [ HH.text "The watcher hasn't inferred anything yet." ]
+        Just fact -> HH.text (describeFact fact)
+    ]
+
+-- | The facts-per-event sparkline, moved up under the eye: a bar per event
+-- | (height = facts inferred there), the current position in accent, each
+-- | bar a scrub target. Labelled with the envelope progress / solution.
+sparkline :: forall m. Game -> Int -> H.ComponentHTML Action Slots m
+sparkline game position =
+  HH.div [ HP.class_ (HH.ClassName "spark") ]
+    [ HH.div [ HP.class_ (HH.ClassName "spark-label") ] [ HH.text label ]
+    , HH.div [ HP.class_ (HH.ClassName "spark-bars") ]
+        ( game.cascades # Array.mapWithIndex \i fr ->
+            HH.div
+              [ HP.classes
+                  ( map HH.ClassName
+                      (if i == position then [ "spark-bar", "current" ] else [ "spark-bar" ])
+                  )
+              , HP.style ("height:" <> show (barPct (Array.length fr.newFacts)) <> "%")
+              , HP.title (if i == 0 then "start" else "E" <> show (i - 1))
+              , HE.onClick \_ -> Scrub i
+              ]
+              []
+        )
+    ]
+  where
+  knowledge = currentKnowledge game position
+  maxCount = fromMaybe 1 (maximum (map (Array.length <<< _.newFacts) game.cascades))
+  barPct c = if c == 0 then 3.0 else max 8.0 (Int.toNumber c / Int.toNumber maxCount * 100.0)
+  label = case solutionIfKnown knowledge of
+    Just sol -> "The watcher has it: " <> describeSuggestion sol
+    Nothing -> "Envelope determined: " <> show (Set.size (envelopeIn knowledge)) <> " of 3"
+
 -- | The highlight the page acts on: a live mouse hover wins; absent one,
 -- | the discovery stepper's focused fact lights its own premise ancestry
 -- | through the very same cross-reference path.
@@ -368,11 +402,7 @@ hoverEvents st game = case effectiveHover st of
 tableColumn :: forall m. MonadAff m => State -> Game -> H.ComponentHTML Action Slots m
 tableColumn st game =
   HH.div [ HP.class_ (HH.ClassName "table-col") ]
-    [ HH.slot _controls unit ControlPanel.component
-        { players: st.config.players }
-        HandleControls
-    , groundTruthPane game st.position
-    ]
+    [ groundTruthPane game st.position ]
 
 header :: forall m. MonadAff m => State -> H.ComponentHTML Action Slots m
 header st =
@@ -380,13 +410,24 @@ header st =
     [ HH.div [ HP.class_ (HH.ClassName "masthead") ]
         [ HH.h1_ [ HH.text "kibitzer" ]
         , HH.p [ HP.class_ (HH.ClassName "strap") ]
-            [ HH.text "A Cluedo watcher who never sees a card — and solves the murder from metadata alone." ]
+            [ HH.text "Two ways to deduce hidden facts — the PureScript libraries Baskerville and Mycroft." ]
         , HH.nav [ HP.class_ (HH.ClassName "tabs") ]
-            [ tabButton st PlayTab "Game"
-            , tabButton st BaskervilleTab "Baskerville"
-            , tabButton st MycroftTab "Mycroft"
+            [ tabButton st PlayTab "① Game"
+            , tabButton st BaskervilleTab "② Baskerville"
+            , tabButton st MycroftTab "③ Mycroft"
             ]
         ]
+    , HH.div [ HP.class_ (HH.ClassName "header-center") ]
+        ( [ HH.img
+              [ HP.src "eye.svg"
+              , HP.class_ (HH.ClassName "header-eye")
+              , HP.alt "the watcher"
+              ]
+          ]
+            <> case st.game of
+                 Just game -> [ latestDerivation game st.position, sparkline game st.position ]
+                 Nothing -> []
+        )
     ]
 
 tabButton :: forall m. MonadAff m => State -> Tab -> String -> H.ComponentHTML Action Slots m

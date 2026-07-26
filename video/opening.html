@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>kibitzer — opening titles</title>
+<!--
+  ============================================================================
+  KIBITZER — OPENING TITLES  (Saul & Elaine Bass homage)
+  Stage: 1920x1080, scaled to fit viewport. Single JS timeline, deterministic.
+
+  SCENE TIMELINE (phase -> start, seconds)
+  ----------------------------------------------------------------------------
+   0.0   Cold open — hairline board fades in, bars slash across
+   1.15  "starring" overline
+   2.0   THE CAST — six suspects, 1.45 s each (token slams center, name slams,
+         token flies to its seat):
+           2.00 Scarlett · 3.45 Mustard · 4.90 White
+           6.35 Green    · 7.80 Peacock · 9.25 Plum
+  11.0   NARRATION — rules of the game, six kinetic lines (out at 14.5)
+  15.0   THE DEAL — 21 card backs riffle in to a center stack
+  16.35  dealing: 18 cards, one every 0.4 s, flip on arrival (done ~23.5)
+  24.0   THE ENVELOPE — three cards remain, fan aside
+  24.35  envelope slams in at center
+  24.9   the three cards dive in, one by one (0.55 s apart), face-down
+  26.65  flap seals · 27.05 wax seal punch · 27.6 board dims
+  27.9   "THE PLAYERS ARE GATHERING DATA."
+  29.7   "BUT THE WATCHER IS GATHERING" …
+  30.0   THE EYE opens (center)                       <- signature moment
+  30.65  "META-DATA."
+  33.5   eye contracts; iris flies down …
+  33.9   "kibitzer" wordmark slams in; iris lands as the red full stop
+  34.9   red rule · 35.2 subtitle
+  37.0   END — hold on final frame
+  ----------------------------------------------------------------------------
+  Re-time by editing the numbers in buildTimeline() below.
+  ============================================================================
+-->
+<style>
+  :root { --ink:#141414; --paper:#f4f1ea; --red:#d92b2b; }
+  html, body { margin:0; height:100%; background:var(--ink); overflow:hidden; }
+  body { font-family:"Helvetica Neue", Helvetica, Arial, system-ui, sans-serif; }
+
+  #frame {
+    position:absolute; left:50%; top:50%;
+    width:1920px; height:1080px;
+    background:var(--ink); overflow:hidden;
+    transform:translate(-50%,-50%);
+  }
+
+  /* ---------- layers ---------- */
+  #boardLayer { position:absolute; inset:0; z-index:100; transition:opacity .8s ease; }
+  #boardLayer.dim { opacity:.09; }
+  #eyesvg     { position:absolute; inset:0; z-index:300; pointer-events:none; }
+  #typeLayer  { position:absolute; inset:0; z-index:400; pointer-events:none; }
+  #barsLayer  { position:absolute; inset:0; z-index:500; pointer-events:none; }
+  #disclaimer {
+    position:absolute; left:0; right:0; bottom:14px; z-index:600;
+    text-align:center; font-size:14px; letter-spacing:.12em;
+    color:rgba(244,241,234,.32);
+  }
+
+  .condense { display:inline-block; transform:scaleX(.84); transform-origin:center; }
+  .acc { color:var(--red); }
+
+  /* ---------- shared kinetic type ---------- */
+  @keyframes kslam { from { opacity:0; transform:translateY(80px); }
+                     to   { opacity:1; transform:none; } }
+  @keyframes kout  { from { opacity:1; transform:none; }
+                     to   { opacity:0; transform:translateY(-64px); } }
+  @keyframes punchE { 0%   { opacity:0; transform:scale(1.35); }
+                      60%  { opacity:1; transform:scale(.95); }
+                      100% { opacity:1; transform:scale(1); } }
+
+  /* ---------- opening bars ---------- */
+  .bar { position:absolute; left:0; width:1920px; height:46px;
+         transform:scaleX(0); transition:transform .3s cubic-bezier(.25,1,.3,1); }
+  .bar.in  { transform:scaleX(1); }
+  .bar.out { transform:scaleX(0); transition:transform .22s cubic-bezier(.6,0,.8,.4); }
+
+  /* ---------- overline ---------- */
+  #overline { position:absolute; left:0; right:0; top:492px; text-align:center;
+              font-size:30px; letter-spacing:.6em; color:var(--paper); opacity:0; }
+  #overline.show { animation:kslam .26s cubic-bezier(.16,1,.3,1) both; }
+  #overline.out  { animation:kout  .2s ease-in both; }
+
+  /* ---------- board hairlines ---------- */
+  #boardsvg { position:absolute; inset:0; opacity:0; transition:opacity 1s ease; }
+  #boardsvg.show { opacity:1; }
+
+  /* ---------- suspect tokens ---------- */
+  .token { position:absolute; left:0; top:0; width:100px; height:140px;
+           opacity:0; transform:var(--t);
+           transition:transform .5s cubic-bezier(.22,1,.3,1);
+           will-change:transform; }
+  .token.on { opacity:1; }
+  @keyframes tpunch { 0%   { opacity:0; transform:var(--t) scale(1.35); }
+                      60%  { opacity:1; transform:var(--t) scale(.96); }
+                      100% { opacity:1; transform:var(--t); } }
+  .token.punch { animation:tpunch .34s cubic-bezier(.2,1,.3,1) both; }
+  @keyframes tpulse { 50% { transform:var(--t) scale(1.14); } }
+  .token.pulse { animation:tpulse .26s ease-out both; }
+  .token svg { width:100%; height:100%; display:block; }
+
+  .slabel { position:absolute; width:220px; margin-left:-110px; text-align:center;
+            font-size:21px; font-weight:700; letter-spacing:.32em;
+            color:rgba(244,241,234,.55);
+            opacity:0; transform:translateY(14px);
+            transition:opacity .3s ease, transform .3s cubic-bezier(.2,1,.3,1); }
+  .slabel.show { opacity:1; transform:none; }
+
+  /* ---------- cast name block ---------- */
+  #castName { position:absolute; left:0; right:0; top:648px; text-align:center; }
+  #castName .ct { font-size:34px; font-weight:700; letter-spacing:.55em;
+                  color:var(--paper); opacity:0; margin-bottom:14px; }
+  #castName .cs { font-size:152px; font-weight:900; line-height:1;
+                  letter-spacing:.005em; opacity:0; }
+  #castName.show .ct { animation:kslam .24s cubic-bezier(.16,1,.3,1) both; }
+  #castName.show .cs { animation:kslam .28s .05s cubic-bezier(.16,1,.3,1) both; }
+  #castName.out  .ct { animation:kout .2s ease-in both; }
+  #castName.out  .cs { animation:kout .2s .03s ease-in both; }
+  .rp { color:var(--red); }
+
+  /* ---------- narration ---------- */
+  #nar { position:absolute; inset:0; display:flex; flex-direction:column;
+         justify-content:center; align-items:center; gap:16px; }
+  .nline { font-size:46px; font-weight:800; color:var(--paper);
+           opacity:0; transform:translateX(var(--fx,160px));
+           transition:opacity .26s ease, transform .26s cubic-bezier(.2,1,.3,1); }
+  .nline.lead { font-size:29px; font-weight:700; letter-spacing:.34em; }
+  .nline.show { opacity:1; transform:none; }
+  .nline.out  { opacity:0; transform:translateX(calc(var(--fx,160px) * -1));
+                transition-duration:.2s; }
+
+  /* ---------- cards ---------- */
+  .card { position:absolute; left:0; top:0; width:96px; height:140px; z-index:60;
+          transform:var(--t); perspective:800px;
+          transition:transform .36s cubic-bezier(.25,.9,.25,1.03);
+          will-change:transform; }
+  .card.divez { z-index:80; }
+  .card .inner { position:absolute; inset:0; transform-style:preserve-3d;
+                 transition:transform .32s cubic-bezier(.2,.8,.3,1); }
+  .cface { position:absolute; inset:0; backface-visibility:hidden;
+           border-radius:6px; display:flex; flex-direction:column;
+           align-items:center; justify-content:center; gap:11px; }
+  .cback { background:#1f1f1f; box-shadow:inset 0 0 0 2px rgba(244,241,234,.28); }
+  .bdot  { width:20px; height:20px; border-radius:50%; background:var(--red);
+           box-shadow:0 0 0 5px #1f1f1f, 0 0 0 7px rgba(244,241,234,.35); }
+  .cfront { transform:rotateY(180deg); }
+  .cname { font-weight:800; font-size:13.5px; line-height:1.22; text-align:center;
+           letter-spacing:.03em; padding:0 5px; transform:scaleX(.85); }
+  .glyph { width:15px; height:15px; background:currentColor; }
+  .g-s { border-radius:50%; }
+  .g-w { clip-path:polygon(50% 0, 100% 100%, 0 100%); }
+  .g-r { }
+
+  /* ---------- envelope ---------- */
+  #envFront { position:absolute; left:810px; top:455px; width:300px; height:190px;
+              z-index:90; opacity:0; }
+  #envFront.in { animation:punchE .3s cubic-bezier(.2,1,.3,1) both; }
+  #envFlap { position:absolute; left:810px; top:455px; width:300px; height:110px;
+             z-index:50; opacity:0; transform-origin:50% 0;
+             transform:var(--f, scaleY(-1));
+             transition:opacity .18s ease, transform .3s cubic-bezier(.4,1,.5,1); }
+  #envFlap.in { opacity:1; }
+  #envFlap.closing { --f:scaleY(1); z-index:95; }
+  #envFlap svg, #envFront svg { display:block; width:100%; height:100%; }
+  #seal { position:absolute; left:937px; top:530px; width:46px; height:46px;
+          z-index:96; border-radius:50%; background:var(--red);
+          box-shadow:inset 0 0 0 5px rgba(20,20,20,.3); opacity:0; }
+  #seal.in { animation:punchE .3s cubic-bezier(.2,1,.3,1) both; }
+
+  /* ---------- climax title cards ---------- */
+  .clblock { position:absolute; left:0; right:0; text-align:center; }
+  .clsmall { font-size:40px; font-weight:700; letter-spacing:.4em;
+             color:var(--paper); opacity:0; }
+  .clbig   { font-size:225px; font-weight:900; line-height:.95;
+             color:var(--paper); opacity:0; }
+  .clbig2  { font-size:150px; font-weight:900; line-height:1;
+             color:var(--red); opacity:0; }
+  .clblock.show .clsmall { animation:kslam .26s cubic-bezier(.16,1,.3,1) both; }
+  .clblock.show .clbig   { animation:kslam .3s .1s cubic-bezier(.16,1,.3,1) both; }
+  .clblock.show .clbig2  { animation:kslam .3s cubic-bezier(.16,1,.3,1) both; }
+  .clblock.out  .clsmall { animation:kout .2s ease-in both; }
+  .clblock.out  .clbig   { animation:kout .2s .04s ease-in both; }
+  .clblock.out  .clbig2  { animation:kout .2s ease-in both; }
+  .dotp { color:var(--paper); }
+
+  /* ---------- the eye ---------- */
+  .ring { fill:none; stroke:rgba(244,241,234,.22); stroke-width:3; opacity:0;
+          transform-box:fill-box; transform-origin:center; }
+  /* rings hold still — the calmer, stiller eye of the earlier draft.
+     (Was a two-rate ring pulse whose beat frequency read as a shudder.) */
+  #eye.open .ring { opacity:1; }
+  #lashes { transform-box:fill-box; transform-origin:center;
+            transform:scale(.88); transition:transform .4s cubic-bezier(.2,1.3,.3,1); }
+  #eye.open #lashes { transform:scale(1); }
+  .lash { stroke:var(--paper); stroke-width:7; opacity:0; transition:opacity .22s ease; }
+  #eye.open .lash { opacity:1; }
+  #eyeball { transform-box:fill-box; transform-origin:center;
+             opacity:0; transform:scaleY(.03);
+             transition:transform .45s cubic-bezier(.2,1.1,.3,1), opacity .2s ease; }
+  #eye.open #eyeball { opacity:1; transform:scaleY(1); }
+  /* pupil holds still too — no breathing dilation */
+  #iris { transform-box:fill-box; transform-origin:center;
+          transition:transform .58s cubic-bezier(.5,0,.25,1), opacity .12s ease; }
+  #eye.contract .lash  { opacity:0 !important; }
+  #eye.contract .ring  { opacity:0 !important; animation:none; }
+  #eye.contract #almond { opacity:0; transition:opacity .35s ease; }
+
+  /* ---------- wordmark & resolve ---------- */
+  #wordmark { position:absolute; left:0; right:0; top:392px; text-align:center;
+              font-size:210px; font-weight:900; line-height:1;
+              letter-spacing:-.015em; color:var(--paper); opacity:0; }
+  #wordmark.show { opacity:1; animation:kslam .32s cubic-bezier(.16,1,.3,1) both; }
+  #dotAnchor { display:inline-block; width:.15em; height:.15em; border-radius:50%;
+               margin-left:.05em; background:transparent; }
+  #dotAnchor.lit { background:var(--red); }
+  #rule { position:absolute; left:50%; top:652px; width:520px; margin-left:-260px;
+          height:6px; background:var(--red); transform:scaleX(0);
+          transition:transform .4s cubic-bezier(.2,1,.3,1); }
+  #rule.show { transform:scaleX(1); }
+  #subtitle { position:absolute; left:0; right:0; top:686px; text-align:center;
+              font-size:25px; font-weight:700; letter-spacing:.52em;
+              color:rgba(244,241,234,.75); opacity:0; transform:translateY(16px);
+              transition:opacity .4s ease, transform .4s cubic-bezier(.2,1,.3,1); }
+  #subtitle.show { opacity:1; transform:none; }
+
+  /* ---------- replay ---------- */
+  #replay { position:fixed; right:18px; bottom:14px; z-index:1000;
+            background:transparent; border:1px solid rgba(244,241,234,.3);
+            color:rgba(244,241,234,.6); font:600 12px/1 "Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+            letter-spacing:.2em; padding:8px 14px; cursor:pointer; border-radius:3px; }
+  #replay:hover { color:var(--paper); border-color:rgba(244,241,234,.7); }
+</style>
+</head>
+<body>
+
+<div id="frame">
+  <div id="boardLayer">
+    <svg id="boardsvg" viewBox="0 0 1920 1080">
+      <rect x="120" y="70" width="1680" height="940"
+            fill="none" stroke="rgba(244,241,234,.13)" stroke-width="2"/>
+      <rect x="810" y="455" width="300" height="190"
+            fill="none" stroke="rgba(244,241,234,.15)" stroke-width="2"/>
+    </svg>
+    <div id="tokens"></div>
+    <div id="slabels"></div>
+    <div id="cards"></div>
+    <div id="envFlap"><svg viewBox="0 0 300 110">
+      <polygon points="3,3 297,3 150,106" fill="#242424"
+               stroke="#f4f1ea" stroke-width="3"/>
+    </svg></div>
+    <div id="envFront"><svg viewBox="0 0 300 190">
+      <rect x="2" y="2" width="296" height="186" fill="#1d1d1d"
+            stroke="#f4f1ea" stroke-width="3"/>
+      <path d="M4 186 L150 84 L296 186" fill="none"
+            stroke="rgba(244,241,234,.35)" stroke-width="3"/>
+    </svg></div>
+    <div id="seal"></div>
+  </div>
+
+  <svg id="eyesvg" viewBox="0 0 1920 1080">
+    <g id="eye" transform="translate(960,470) scale(.85)">
+      <g id="rings">
+        <circle class="ring r1" r="395"/>
+        <circle class="ring r2" r="455"/>
+      </g>
+      <g id="lashes"></g>
+      <g id="eyeball">
+        <path id="almond" d="M -340 0 Q 0 -215 340 0 Q 0 215 -340 0 Z" fill="#f4f1ea"/>
+        <g id="iris">
+          <circle r="100" fill="#d92b2b"/>
+          <circle r="86" fill="none" stroke="#141414" stroke-width="5" opacity=".5"/>
+          <circle r="64" fill="none" stroke="#141414" stroke-width="5" opacity=".5"/>
+          <circle id="pupil" r="40" fill="#141414"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+
+  <div id="typeLayer">
+    <div id="overline">starring</div>
+
+    <div id="castName">
+      <div class="ct"></div>
+      <div class="cs"><span class="condense"></span></div>
+    </div>
+
+    <div id="nar">
+      <div class="nline lead" style="--fx:-160px"><span class="condense">IN THE GAME OF CLUEDO,</span></div>
+      <div class="nline" style="--fx:180px"><span class="condense">PLAYERS MAKE GUESSES THAT FORCE THEIR RIVALS</span></div>
+      <div class="nline" style="--fx:-180px"><span class="condense">TO <span class="acc">REVEAL</span> THEIR CARDS —</span></div>
+      <div class="nline" style="--fx:180px"><span class="condense">OR REVEAL WHAT THEY DO <span class="acc">NOT</span> HOLD —</span></div>
+      <div class="nline" style="--fx:-180px"><span class="condense">UNTIL SOMEONE CAN NAME THE THREE CARDS</span></div>
+      <div class="nline" style="--fx:180px"><span class="condense">SEALED IN THE <span class="acc">ENVELOPE.</span></span></div>
+    </div>
+
+    <div id="cl1" class="clblock" style="top:322px">
+      <div class="clsmall"><span class="condense">THE PLAYERS ARE GATHERING</span></div>
+      <div class="clbig"><span class="condense">DATA<span class="acc">.</span></span></div>
+    </div>
+    <div id="cl2a" class="clblock" style="top:806px">
+      <div class="clsmall"><span class="condense">BUT THE WATCHER IS GATHERING</span></div>
+    </div>
+    <div id="cl2b" class="clblock" style="top:868px">
+      <div class="clbig2"><span class="condense">META-DATA<span class="dotp">.</span></span></div>
+    </div>
+
+    <div id="wordmark"><span class="condense">kibitzer<span id="dotAnchor"></span></span></div>
+    <div id="rule"></div>
+    <div id="subtitle">A DEDUCTION FROM METADATA</div>
+  </div>
+
+  <div id="barsLayer">
+    <div class="bar" style="top:210px; background:#f4f1ea; transform-origin:left"></div>
+    <div class="bar" style="top:390px; background:#f4f1ea; transform-origin:right"></div>
+    <div class="bar" style="top:560px; background:#d92b2b; transform-origin:left"></div>
+    <div class="bar" style="top:730px; background:#f4f1ea; transform-origin:right"></div>
+    <div class="bar" style="top:900px; background:#f4f1ea; transform-origin:left"></div>
+  </div>
+
+  <div id="disclaimer">CLUEDO / CLUE is a trademark of its respective owner; used here for illustration only.</div>
+</div>
+
+<button id="replay">REPLAY</button>
+
+<script>
+/* =========================================================================
+   Data
+   ========================================================================= */
+const SUS = [
+  { n:'SCARLETT', t:'MISS',      c:'#cf2f38', dark:false },
+  { n:'MUSTARD',  t:'COLONEL',   c:'#e3a72b', dark:true  },
+  { n:'WHITE',    t:'MRS.',      c:'#e9e5da', dark:true  },
+  { n:'GREEN',    t:'REVEREND',  c:'#2e7d4f', dark:false },
+  { n:'PEACOCK',  t:'MRS.',      c:'#2f6690', dark:false },
+  { n:'PLUM',     t:'PROFESSOR', c:'#6a3d8f', dark:false },
+];
+/* Player seats A..F identified with the six tokens in SUS order. */
+const SEATS  = [ {x:400,y:135},{x:960,y:135},{x:1520,y:135},
+                 {x:400,y:945},{x:960,y:945},{x:1520,y:945} ];
+const CARDY  = [305,305,305,775,775,775];
+const LABELY = [212,212,212,872,872,872];
+
+/* Hands, in deal order per player (round-robin: round r -> slot r).      */
+const HANDS = [
+  [['SCARLETT','s0'], ['DINING ROOM','r'],  ['STUDY','r']],          // A
+  [['GREEN','s3'],    ['REVOLVER','w'],     ['LIBRARY','r']],        // B
+  [['ROPE','w'],      ['KITCHEN','r'],      ['HALL','r']],           // C
+  [['WHITE','s2'],    ['LEAD PIPE','w'],    ['WRENCH','w']],         // D
+  [['PLUM','s5'],     ['BALLROOM','r'],     ['CONSERVATORY','r']],   // E
+  [['MUSTARD','s1'],  ['CANDLESTICK','w'],  ['BILLIARD ROOM','r']],  // F
+];
+const ENVC = [ ['PEACOCK','s4'], ['KNIFE','w'], ['LOUNGE','r'] ];    // never shown
+
+const DEALS = [];
+for (let r = 0; r < 3; r++)
+  for (let p = 0; p < 6; p++)
+    DEALS.push({ p, r, name:HANDS[p][r][0], cat:HANDS[p][r][1] });
+
+/* =========================================================================
+   Helpers
+   ========================================================================= */
+const frame = document.getElementById('frame');
+const $ = s => frame.querySelector(s);
+function div(cls, parent) {
+  const d = document.createElement('div'); d.className = cls;
+  parent.appendChild(d); return d;
+}
+/* transform for a 100x140 token box, centered at (x,y) */
+const Tt = (x,y,s) => `translate(${x-50}px,${y-70}px) scale(${s})`;
+/* transform for a 96x140 card box, centered at (x,y) */
+const Tc = (x,y,s=1,rot=0) =>
+  `translate(${x-48}px,${y-70}px) rotate(${rot}deg) scale(${s})`;
+
+function catStyle(code) {
+  if (code[0] === 's') {
+    const s = SUS[+code[1]];
+    return { bg:s.c, fg:s.dark ? '#141414' : '#f4f1ea', g:'g-s' };
+  }
+  if (code === 'w') return { bg:'#4d5f6e', fg:'#f4f1ea', g:'g-w' };
+  return { bg:'#8a7c3a', fg:'#141414', g:'g-r' };
+}
+
+function pawnSvg(color) {
+  return `<svg viewBox="0 0 100 140" fill="${color}">
+    <circle cx="50" cy="26" r="20"/>
+    <path d="M38,40 L26,120 Q24,130 34,130 L66,130 Q76,130 74,120 L62,40
+             Q50,34 38,40 Z"/>
+  </svg>`;
+}
+
+/* =========================================================================
+   Build (fresh DOM per play — replay restores the template)
+   ========================================================================= */
+const TEMPLATE = frame.innerHTML;
+let refs = {}, timers = [];
+
+function build() {
+  refs = {
+    boardLayer:$('#boardLayer'), boardsvg:$('#boardsvg'),
+    castName:$('#castName'), castTitle:$('#castName .ct'),
+    castSur:$('#castName .cs .condense'),
+    overline:$('#overline'), nar:[...frame.querySelectorAll('.nline')],
+    envFront:$('#envFront'), envFlap:$('#envFlap'), seal:$('#seal'),
+    cl1:$('#cl1'), cl2a:$('#cl2a'), cl2b:$('#cl2b'),
+    eye:$('#eye'), iris:$('#iris'), lashes:$('#lashes'),
+    wordmark:$('#wordmark'), dot:$('#dotAnchor'),
+    rule:$('#rule'), subtitle:$('#subtitle'),
+    bars:[...frame.querySelectorAll('.bar')],
+    tokens:[], labels:[],
+  };
+
+  /* tokens + seat labels */
+  const tokC = $('#tokens'), labC = $('#slabels');
+  SUS.forEach((s, i) => {
+    const t = div('token', tokC);
+    t.innerHTML = pawnSvg(s.c);
+    refs.tokens.push(t);
+    const l = div('slabel', labC);
+    l.textContent = s.n;
+    l.style.left = SEATS[i].x + 'px';
+    l.style.top  = (LABELY[i] - 12) + 'px';
+    refs.labels.push(l);
+  });
+
+  /* lashes (16 rays) */
+  for (let i = 0; i < 16; i++) {
+    const a = i * Math.PI / 8;
+    const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1', Math.cos(a)*372); ln.setAttribute('y1', Math.sin(a)*372);
+    ln.setAttribute('x2', Math.cos(a)*420); ln.setAttribute('y2', Math.sin(a)*420);
+    ln.setAttribute('class','lash');
+    ln.style.transitionDelay = (i * 20) + 'ms';
+    refs.lashes.appendChild(ln);
+  }
+
+  /* cards — DOM order bottom-first: envelope trio, then deals 17..0 */
+  const cardC = $('#cards');
+  function makeCard(name, cat, k) {
+    const el = div('card', cardC);
+    const inner = div('inner', el);
+    const back = div('cface cback', inner);
+    back.innerHTML = '<span class="bdot"></span>';
+    const face = div('cface cfront', inner);
+    const st = catStyle(cat);
+    face.style.background = st.bg; face.style.color = st.fg;
+    face.innerHTML =
+      `<span class="glyph ${st.g}"></span><span class="cname">${name}</span>`;
+    el.style.setProperty('--t', Tc(2160, 450 + k*5, 1, 5));  // offscreen right
+    return { el, inner };
+  }
+  let k = 0;
+  refs.envCards = ENVC.map(c => makeCard(c[0], c[1], k++));
+  for (let i = DEALS.length - 1; i >= 0; i--)
+    DEALS[i].card = makeCard(DEALS[i].name, DEALS[i].cat, k++);
+  /* riffle order = creation order (bottom of stack first) */
+  refs.stack = [...refs.envCards, ...DEALS.slice().reverse().map(d => d.card)];
+}
+
+/* =========================================================================
+   Actions
+   ========================================================================= */
+function castBeat(i) {
+  const s = SUS[i], tok = refs.tokens[i];
+  refs.castTitle.textContent = s.t;
+  refs.castSur.innerHTML = `${s.n}<span class="rp">.</span>`;
+  refs.castSur.parentElement.style.color = s.c;
+  refs.castName.classList.remove('out','show');
+  void refs.castName.offsetWidth;
+  refs.castName.classList.add('show');
+  tok.style.setProperty('--t', Tt(960, 390, 2.9));
+  tok.classList.add('on','punch');
+}
+function castFly(i) {
+  const tok = refs.tokens[i];
+  tok.classList.remove('punch');
+  void tok.offsetWidth;
+  tok.style.setProperty('--t', Tt(SEATS[i].x, SEATS[i].y, .8));
+  refs.castName.classList.remove('show');
+  refs.castName.classList.add('out');
+}
+function dealOne(i) {
+  const d = DEALS[i];
+  d.card.el.style.setProperty('--t',
+    Tc(SEATS[d.p].x + (d.r - 1) * 104, CARDY[d.p]));
+}
+function flipOne(i) {
+  DEALS[i].card.inner.style.transform = 'rotateY(180deg)';
+  const tok = refs.tokens[DEALS[i].p];
+  tok.classList.remove('pulse'); void tok.offsetWidth; tok.classList.add('pulse');
+}
+function diveEnvCard(k) {
+  const c = refs.envCards[k].el;
+  c.classList.add('divez');
+  c.style.setProperty('--t', Tc(960, 450, .9));           // into the mouth
+  timers.push(setTimeout(() =>
+    c.style.setProperty('--t', Tc(960, 565, .8)), 330));  // gone inside
+}
+function flyIrisToDot() {
+  const fr = frame.getBoundingClientRect();
+  const kk = fr.width / 1920;
+  const ar = refs.dot.getBoundingClientRect();
+  const cx = (ar.left + ar.width/2 - fr.left) / kk;
+  const cy = (ar.top  + ar.height/2 - fr.top) / kk;
+  const gs = 0.85;                       // #eye group scale
+  const dx = (cx - 960) / gs, dy = (cy - 470) / gs;
+  const s  = (ar.width / kk) / (200 * gs);   // iris diameter = 200 local units
+  refs.iris.style.transform = `translate(${dx}px, ${dy}px) scale(${s})`;
+}
+
+/* =========================================================================
+   The timeline — one ordered list of { at, do }
+   ========================================================================= */
+function buildTimeline() {
+  const TL = [];
+  const at = (t, fn) => TL.push({ at:t, do:fn });
+
+  /* --- 0.0 cold open ----------------------------------------------------- */
+  at(0, () => refs.boardsvg.classList.add('show'));
+  /* bars slash in alternating, then snap out */
+  for (let i = 0; i < 5; i++) {
+    at(200 + i*130, () => refs.bars[i].classList.add('in'));
+    at(950 + i*90,  () => refs.bars[i].classList.replace('in','out'));
+  }
+  at(1150, () => refs.overline.classList.add('show'));
+  at(1900, () => { refs.overline.classList.remove('show');
+                   refs.overline.classList.add('out'); });
+
+  /* --- 2.0 the cast ------------------------------------------------------ */
+  for (let i = 0; i < 6; i++) {
+    const b = 2000 + i * 1450;
+    at(b,        () => castBeat(i));
+    at(b + 900,  () => castFly(i));
+    at(b + 1250, () => refs.labels[i].classList.add('show'));
+  }
+  at(10600, () => refs.castName.classList.remove('out'));
+
+  /* --- 11.0 narration: the rules of the game ----------------------------- */
+  for (let i = 0; i < 6; i++) {
+    at(11000 + i*260, () => refs.nar[i].classList.add('show'));
+    at(14500 + i*40,  () => { refs.nar[i].classList.remove('show');
+                              refs.nar[i].classList.add('out'); });
+  }
+
+  /* --- 15.0 the deal ------------------------------------------------------ */
+  for (let i = 0; i < 21; i++)
+    at(15000 + i*30, () => refs.stack[i].el.style.setProperty('--t',
+        Tc(960 + (i%2 ? 1 : -1), 545 - i*0.7)));
+  for (let i = 0; i < 18; i++) {
+    at(16350 + i*400,       () => dealOne(i));
+    at(16350 + i*400 + 360, () => flipOne(i));
+  }
+
+  /* --- 24.0 the envelope --------------------------------------------------- */
+  at(24000, () => {   /* three remain — fan aside to the left */
+    const F = [ [640,545,-8], [700,540,0], [760,545,8] ];
+    refs.envCards.forEach((c, k) =>
+      c.el.style.setProperty('--t', Tc(F[k][0], F[k][1], 1, F[k][2])));
+  });
+  at(24350, () => { refs.envFront.classList.add('in');
+                    refs.envFlap.classList.add('in'); });
+  at(24900, () => diveEnvCard(0));
+  at(25450, () => diveEnvCard(1));
+  at(26000, () => diveEnvCard(2));
+  at(26650, () => refs.envFlap.classList.add('closing'));
+  at(27050, () => refs.seal.classList.add('in'));
+  at(27600, () => refs.boardLayer.classList.add('dim'));
+
+  /* --- 27.9 climax narration ---------------------------------------------- */
+  at(27900, () => refs.cl1.classList.add('show'));
+  at(29400, () => { refs.cl1.classList.remove('show');
+                    refs.cl1.classList.add('out'); });
+  at(29700, () => refs.cl2a.classList.add('show'));
+  at(30000, () => refs.eye.classList.add('open'));          /* THE EYE */
+  at(30650, () => refs.cl2b.classList.add('show'));
+  at(33350, () => { refs.cl2a.classList.replace('show','out');
+                    refs.cl2b.classList.replace('show','out'); });
+
+  /* --- 33.5 resolve: eye becomes the full stop of "kibitzer" -------------- */
+  at(33500, () => refs.eye.classList.add('contract'));
+  at(33560, () => flyIrisToDot());
+  at(33900, () => refs.wordmark.classList.add('show'));
+  at(34220, () => { refs.iris.style.opacity = 0;
+                    refs.dot.classList.add('lit'); });
+  at(34900, () => refs.rule.classList.add('show'));
+  at(35200, () => refs.subtitle.classList.add('show'));
+  /* --- ~37.0 end — hold on final frame ------------------------------------ */
+
+  return TL.sort((a, b) => a.at - b.at);
+}
+
+/* =========================================================================
+   Runner
+   ========================================================================= */
+function play() {
+  timers.forEach(clearTimeout); timers = [];
+  frame.innerHTML = TEMPLATE;
+  build();
+  buildTimeline().forEach(s => timers.push(setTimeout(s.do, s.at)));
+}
+
+function fit() {
+  const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+  frame.style.transform = `translate(-50%,-50%) scale(${k})`;
+}
+addEventListener('resize', fit); fit();
+
+document.getElementById('replay').addEventListener('click', play);
+setTimeout(play, 250);
+</script>
+</body>
+</html>

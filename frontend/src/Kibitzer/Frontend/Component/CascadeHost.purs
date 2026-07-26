@@ -34,7 +34,6 @@ import Effect.Aff.Class (class MonadAff)
 import Effect.Class (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
 import Hylograph.Simulation (Engine(..), SimulationHandle, runSimulation)
@@ -549,10 +548,14 @@ packsAnimFrame = do
 render :: forall m. State -> H.ComponentHTML Action () m
 render st =
   HH.section [ HP.class_ (HH.ClassName "cascade-col") ]
-    [ HH.div [ HP.class_ (HH.ClassName "cascade-toolbar") ]
-        (if st.packView then packsLegend else gridLegend st)
-    , HH.div [ HP.id (containerId st) ] []
-    ]
+    (toolbar <> [ HH.div [ HP.id (containerId st) ] [] ])
+  where
+  -- only the packs view carries a toolbar (its legend); the grids are
+  -- always-wired and chrome-free now — no wiring toggle, no layout
+  -- switcher; the latest deduction is surfaced by the page above the grid
+  toolbar =
+    if st.packView then [ HH.div [ HP.class_ (HH.ClassName "cascade-toolbar") ] packsLegend ]
+    else []
 
 -- | Legend for the possibility packs. No colour key — the table column's
 -- | card chips carry the same category hues, so the mapping is learned
@@ -565,18 +568,3 @@ packsLegend =
       [ HH.text "orbit = showed one of these" ]
   ]
 
--- | The grid toolbar carries only the wiring toggle now — the
--- | TABLE/SKYLINE/ORBITS switcher is gone (each instance is fixed at mount:
--- | the notebook is a table, the cascade is orbits), and the symbol legend
--- | is left off so meaning emerges from the picture itself.
-gridLegend :: forall m. State -> Array (H.ComponentHTML Action () m)
-gridLegend st =
-  [ HH.label [ HP.class_ (HH.ClassName "toggle") ]
-      [ HH.input
-          [ HP.type_ HP.InputCheckbox
-          , HP.checked st.wiring
-          , HE.onChecked ToggleWiring
-          ]
-      , HH.text "wiring"
-      ]
-  ]

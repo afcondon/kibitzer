@@ -31,9 +31,24 @@ body {
 /* ---------- header ---------- */
 
 header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 2rem;
   padding: 1.25rem 2rem 1rem;
   border-bottom: 2px solid var(--ink);
 }
+
+/* the watcher's eye (from the title sequence) crowns the header, with the
+   latest deduction beneath it — "the eye sees: …" */
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.header-eye { height: 48px; width: auto; display: block; }
 
 .transport-bar {
   display: flex;
@@ -523,8 +538,9 @@ h2 {
   padding: 0.85rem;
   background: color-mix(in srgb, var(--paper) 92%, transparent);
   backdrop-filter: blur(3px);
-  border: 1px solid var(--ink);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.10);
 }
 
 .transport-float {
@@ -818,3 +834,53 @@ h2 {
 .split4 .feed-col { overflow: hidden; display: flex; flex-direction: column; }
 .split4 .feed-col .feed-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .split4 .feed-col .feed { max-height: none; flex: 1; min-height: 0; overflow-y: auto; }
+
+/* ---------- Game page: ground truth · events · the wider notebook ---------- */
+.split3-game {
+  display: grid;
+  grid-template-columns: minmax(220px, 4fr) minmax(220px, 4fr) minmax(440px, 7fr);
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+}
+.split3-game > * { overflow-y: auto; min-height: 0; }
+
+/* the latest deduction, centred under the eye in the header */
+.latest-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 44ch;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.latest-line .latest-empty { color: var(--muted); }
+
+/* the facts-per-event sparkline, under the eye + latest line */
+.spark { display: flex; flex-direction: column; gap: 0.3rem; width: 22rem; }
+.spark-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.spark-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 34px;
+}
+.spark-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  background: #cfcfcf;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.spark-bar:hover { background: var(--muted); }
+.spark-bar.current { background: var(--accent); }
+
+@media (max-width: 900px) {
+  .split3-game { grid-template-columns: 1fr; }
+}

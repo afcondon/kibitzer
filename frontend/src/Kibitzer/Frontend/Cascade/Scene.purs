@@ -115,8 +115,7 @@ renderScene input = do
   _ <- rerender "#cascade-edges" (edgesTree input.edges)
   _ <- rerender "#cascade-brackets" (bracketsTree input.bracketFade input.brackets)
   _ <- rerender "#cascade-marks" (marksTree input.tokens input.onHoverFact input.marks)
-  _ <- rerender "#cascade-rail" (railTree input.rail input.verdict)
-  _ <- rerender "#cascade-strip" (stripTree input.onBar input.strip)
+  _ <- rerender "#cascade-rail" (railTree input.rail)
   pure unit
 
 chromeTree :: PlayerCount -> Tree
@@ -426,8 +425,10 @@ ringsTree opacity rings =
             (if g.label == "" then [] else [ caption ])
         )
 
-railTree :: String -> Verdict -> Tree
-railTree label verdict =
+-- | Just the current-event label now — the verdict and the facts-per-event
+-- | strip moved up under the header eye.
+railTree :: String -> Tree
+railTree label =
   elem Group []
     [ elem Text
         [ F.x L.railAnchor.x
@@ -439,21 +440,7 @@ railTree label verdict =
         , staticStr "textContent" label
         ]
         []
-    , case verdict of
-        Working text -> verdictText text "#767676" "400"
-        Solved text -> verdictText text accent "600"
     ]
-  where
-  verdictText text colour weight = elem Text
-    [ F.x L.railAnchor.x
-    , F.y (L.stripTop - 12.0)
-    , F.textAnchor "start"
-    , F.fontSize "13"
-    , F.fontWeight weight
-    , F.fill colour
-    , staticStr "textContent" text
-    ]
-    []
 
 stripTree :: (Int -> Effect Unit) -> Array StripBar -> Tree
 stripTree onBar bars =
