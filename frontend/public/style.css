@@ -31,10 +31,6 @@ body {
 /* ---------- header ---------- */
 
 header {
-  display: grid;
-  grid-template-columns: 1fr minmax(30rem, 46rem);
-  gap: 2rem;
-  align-items: end;
   padding: 1.25rem 2rem 1rem;
   border-bottom: 2px solid var(--ink);
 }
@@ -222,7 +218,7 @@ h1 {
   min-height: 0;
   overflow-y: auto;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   list-style: none;
   padding: 0.75rem 1.25rem;
   font-size: 0.78rem;
@@ -513,15 +509,104 @@ h2 {
   color: var(--accent);
 }
 
-/* ---------- transport (in the header) ---------- */
+/* ---------- floating control block (top-right) ---------- */
 
-.transport { display: flex; gap: 0.35rem; }
+.controls-float {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 40;
+  width: 15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(3px);
+  border: 1px solid var(--ink);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
 
-.transport-btn { min-width: 2.6rem; }
+.transport-float {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.transport-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.transport-row {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.step-row .row-caption {
+  flex: 0 0 4.2rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.transport-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.transport-btn.wide { width: 100%; }
 
 .scrubber {
   width: 100%;
   accent-color: var(--accent);
+}
+
+.transport-float .position {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  text-align: right;
+}
+
+.discovery-callout {
+  padding: 0.55rem 0.65rem;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  background: var(--paper);
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+}
+
+/* ---------- Mycroft (world-space) pane ---------- */
+
+.mycroft-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mycroft-note {
+  padding: 0.6rem 2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--wash);
+}
+
+.worlds-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  min-height: 0;
 }
 
 /* ---------- prose pages (About / The code) ---------- */

@@ -10,6 +10,9 @@
 module Kibitzer.Frontend.Types
   ( Game
   , Tab(..)
+  , Discovery
+  , discoveries
+  , isDeductive
   , currentKnowledge
   , currentEvent
   , maxPosition
@@ -24,7 +27,7 @@ import Kibitzer.Board (Position)
 import Kibitzer.Cascade (CascadeEdge, CascadeFrame)
 import Kibitzer.Event (Event)
 import Kibitzer.Game (Result)
-import Kibitzer.Knowledge (FactId, Knowledge, emptyKnowledge)
+import Kibitzer.Knowledge (FactId, Knowledge, Rule(..), emptyKnowledge)
 import Kibitzer.Player (PlayerId, defaultPlayerCount)
 
 type Game =
@@ -38,9 +41,37 @@ type Game =
   , allEdges :: Array CascadeEdge -- the complete premise DAG of the finished game
   }
 
-data Tab = PlayTab | CascadeTab | AboutTab | CodeTab
+data Tab = PlayTab | BaskervilleTab | MycroftTab
 
 derive instance Eq Tab
+
+-- | A deductive moment on the timeline: a fact the watcher *worked out*
+-- | (not merely observed), at the position where it first appears. The
+-- | discovery stepper walks this list — "step to the next thing figured
+-- | out" — as distinct from the event stepper's "next thing that happened".
+type Discovery = { position :: Int, factId :: FactId, rule :: Rule }
+
+-- | Every deductive fact in timeline order, read straight off the
+-- | per-position `newFacts` the cascade already computed. Direct
+-- | observations (own hand, a shown card, a pass) are skipped — they are
+-- | what the watcher is *told*, not what it *derives*.
+discoveries :: Game -> Array Discovery
+discoveries game =
+  Array.concat (Array.mapWithIndex frameDiscoveries game.cascades)
+  where
+  frameDiscoveries position frame =
+    frame.newFacts
+      # Array.filter (isDeductive <<< _.justification.rule)
+      # map (\f -> { position, factId: f.id, rule: f.justification.rule })
+
+-- | Direct facts are told to the watcher; deductive facts are worked out.
+-- | The discovery stepper lands only on the latter.
+isDeductive :: Rule -> Boolean
+isDeductive = case _ of
+  OwnHand -> false
+  SawCard -> false
+  PassImpliesLacks -> false
+  _ -> true
 
 currentKnowledge :: Game -> Int -> Knowledge
 currentKnowledge game position =

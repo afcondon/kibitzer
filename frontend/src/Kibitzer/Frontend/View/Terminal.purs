@@ -1,5 +1,6 @@
--- | The middle column: the game's event stream as a scrolling terminal,
--- | newest line at the bottom, under the headline counter. This is the
+-- | The middle column: the game's event stream as a top-prepending
+-- | stack — newest line at the top, older history pushed down beneath it,
+-- | under the headline counter. This is the
 -- | ground-truth transcript — the same prose the table's stage shows one
 -- | line at a time. On the cross-referenced page each line is also a
 -- | hover source and target: hovering it lights everything the event
@@ -33,8 +34,8 @@ terminalPane hoverHandlers implicated game position =
         HH.p [ HP.class_ (HH.ClassName "pane-note") ]
           [ HH.text "Nothing yet. Press play — every event lands here." ]
       else
-        -- newest-first in the DOM; CSS column-reverse pins the view to
-        -- the latest line with no scroll bookkeeping at all
+        -- newest-first in the DOM, laid out top-down (CSS `column`), so
+        -- the latest line sits at the top and history stacks beneath it
         HH.ol [ HP.class_ (HH.ClassName "terminal") ]
           (Array.reverse (Array.mapWithIndex line (Array.take position game.result.log)))
     ]

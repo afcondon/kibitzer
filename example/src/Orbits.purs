@@ -94,10 +94,14 @@ orbitSvg s =
         NotInEnvelope _ -> dot "1.7" "#e5a9a9"
 
 runOrbits :: Effect Unit
-runOrbits = log page
-  where
-  samples = curate
+runOrbits = do
+  u <- pure unit
+  log (orbitsPage (curate u))
 
+orbitsPage :: Array Sample -> String
+orbitsPage samples =
+  page
+  where
   figure s =
     "<figure>" <> orbitSvg s
       <> "<figcaption>" <> caption s <> "</figcaption></figure>"

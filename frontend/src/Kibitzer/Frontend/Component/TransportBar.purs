@@ -1,8 +1,11 @@
--- | The transport as a child component: play controls, scrubber, and
--- | position readout — global chrome, living in the header. Stateless;
--- | everything it shows arrives as `Input`, every press leaves as
--- | `Output`. Step and jump buttons are just scrubs to computed
--- | positions (the parent clamps), so the whole surface is two intents.
+-- | The transport as a floating control block, pinned top-right. Four
+-- | stacked rows — a wide play/pause, an EVENT step (back/forward through
+-- | what happened), a DISCOVERY step (prev/next deduction the watcher
+-- | worked out), and start/end — plus a slim scrubber and a position
+-- | readout beneath. Stateless: everything it shows arrives as `Input`,
+-- | every press leaves as `Output`. Event steps and start/end are just
+-- | scrubs to computed positions (the parent clamps); the discovery steps
+-- | need the parent's fact index, so they leave as their own intents.
 module Kibitzer.Frontend.Component.TransportBar
   ( Input
   , Output(..)
@@ -25,6 +28,8 @@ type Input = { position :: Int, max :: Int, playing :: Boolean }
 data Output
   = Scrubbed Int
   | PlayToggled
+  | PrevDiscovery
+  | NextDiscovery
 
 type Slot = H.Slot (Const Void) Output Unit
 
@@ -49,13 +54,16 @@ handleAction = case _ of
 
 render :: forall m. Input -> H.ComponentHTML Action () m
 render { position, max: maxPos, playing } =
-  HH.div [ HP.class_ (HH.ClassName "transport-bar") ]
-    [ HH.div [ HP.class_ (HH.ClassName "transport") ]
-        [ button "⏮" (Scrubbed 0)
-        , button "◀" (Scrubbed (position - 1))
-        , button (if playing then "⏸" else "▶") PlayToggled
-        , button "▶▶" (Scrubbed (position + 1))
-        , button "⏭" (Scrubbed maxPos)
+  HH.div [ HP.class_ (HH.ClassName "transport-float") ]
+    [ HH.div [ HP.class_ (HH.ClassName "transport-rows") ]
+        [ HH.div [ HP.classes (map HH.ClassName [ "transport-row", "play-row" ]) ]
+            [ wideButton (if playing then "⏸ Pause" else "▶ Play") PlayToggled ]
+        , stepRow "event" "‹ Back" (Scrubbed (position - 1)) "Forward ›" (Scrubbed (position + 1))
+        , stepRow "deduction" "‹ Prev" PrevDiscovery "Next ›" NextDiscovery
+        , HH.div [ HP.class_ (HH.ClassName "transport-row") ]
+            [ button "⤒ Start" (Scrubbed 0)
+            , button "End ⤓" (Scrubbed maxPos)
+            ]
         ]
     , HH.input
         [ HP.type_ HP.InputRange
@@ -71,8 +79,34 @@ render { position, max: maxPos, playing } =
   where
   positionLabel = if position == 0 then "—" else "E" <> show (position - 1)
 
+-- | A labelled two-button stepper row: a small caption on the left names
+-- | which kind of step this is (so the event and discovery pairs never
+-- | get confused), then the back/forward buttons.
+stepRow
+  :: forall m
+   . String
+  -> String
+  -> Output
+  -> String
+  -> Output
+  -> H.ComponentHTML Action () m
+stepRow caption backLabel backOut fwdLabel fwdOut =
+  HH.div [ HP.classes (map HH.ClassName [ "transport-row", "step-row" ]) ]
+    [ HH.span [ HP.class_ (HH.ClassName "row-caption") ] [ HH.text caption ]
+    , button backLabel backOut
+    , button fwdLabel fwdOut
+    ]
+
 button :: forall m. String -> Output -> H.ComponentHTML Action () m
 button label output =
   HH.button
     [ HE.onClick \_ -> Raise output, HP.class_ (HH.ClassName "transport-btn") ]
+    [ HH.text label ]
+
+wideButton :: forall m. String -> Output -> H.ComponentHTML Action () m
+wideButton label output =
+  HH.button
+    [ HE.onClick \_ -> Raise output
+    , HP.classes (map HH.ClassName [ "transport-btn", "wide" ])
+    ]
     [ HH.text label ]

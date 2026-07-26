@@ -45,11 +45,15 @@ orbits:
 # worlds.html: seed 33 six players — the 1,238-world collapse to a solved
 # view. worlds-gap.html: seed 42 four players — the completeness gap (the
 # space ends certain of five cards, the notebook of four).
+# worlds-768896.html: seed 768896 six players — the demo game, embedded as
+# the frontend's Mycroft pane (the 44.46-trillion-world collapse).
 worlds:
 	spago run --quiet -p kibitzer-example -- trace 33 --players 6 > smt/trace-33.json
 	smt/.venv/bin/python smt/worlds_trace.py smt/trace-33.json > frontend/public/worlds.html
 	spago run --quiet -p kibitzer-example -- trace 42 > smt/trace-42.json
 	smt/.venv/bin/python smt/worlds_trace.py smt/trace-42.json > frontend/public/worlds-gap.html
+	spago run --quiet -p kibitzer-example -- trace 768896 --players 6 > smt/trace-768896.json
+	smt/.venv/bin/python smt/worlds_trace.py smt/trace-768896.json > frontend/public/worlds-768896.html
 
 # The bettor page (EV over proof). BETTOR_SEED picks the featured game —
 # 11 is the corpus's best genuine call (wakes at 82% into an 82% hazard,

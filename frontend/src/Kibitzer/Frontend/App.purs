@@ -38,16 +38,15 @@ import Kibitzer.Frontend.Component.CascadeHost as CascadeHost
 import Kibitzer.Frontend.Component.ControlPanel as ControlPanel
 import Kibitzer.Frontend.Component.SeedControl as SeedControl
 import Kibitzer.Frontend.Component.TransportBar as TransportBar
+import Kibitzer.Frontend.Cascade.Layout (GridLayout(..))
 import Kibitzer.Frontend.Crossref as Crossref
-import Kibitzer.Frontend.Types (Game, Tab(..), currentKnowledge, maxPosition)
-import Kibitzer.Frontend.View.About (aboutPage)
-import Kibitzer.Frontend.View.Board (boardPane)
-import Kibitzer.Frontend.View.Code (codePage)
+import Kibitzer.Frontend.Types (Discovery, Game, Tab(..), currentKnowledge, discoveries, maxPosition)
+import Kibitzer.Frontend.View.Board (groundTruthPane)
 import Kibitzer.Frontend.View.Feed (feedPane)
-import Kibitzer.Frontend.View.Notebook (notebookPane)
 import Kibitzer.Frontend.View.Terminal (terminalPane)
+import Kibitzer.Describe (describeFact)
 import Kibitzer.Game (simulate)
-import Kibitzer.Knowledge (facts)
+import Kibitzer.Knowledge (Fact, FactId(..), facts)
 import Data.Set (Set)
 import Data.Set as Set
 import Kibitzer.Infer (knowledgeTimeline)
@@ -72,6 +71,7 @@ type State =
   , playing :: Boolean
   , tab :: Tab
   , hover :: Maybe Crossref.Hover -- the page-wide cross-reference hover
+  , focused :: Maybe FactId -- the discovery stepper's current fact, if any
   }
 
 data Action
@@ -90,6 +90,7 @@ type Slots =
   , transport :: TransportBar.Slot
   , packs :: CascadeHost.Slot
   , orbits :: CascadeHost.Slot
+  , notebook :: CascadeHost.Slot
   )
 
 _controls = Proxy :: Proxy "controls"
@@ -97,6 +98,7 @@ _seed = Proxy :: Proxy "seed"
 _transport = Proxy :: Proxy "transport"
 _packs = Proxy :: Proxy "packs"
 _orbits = Proxy :: Proxy "orbits"
+_notebook = Proxy :: Proxy "notebook"
 
 component :: forall q i o m. MonadAff m => H.Component q i o m
 component = H.mkComponent
@@ -107,6 +109,7 @@ component = H.mkComponent
       , playing: false
       , tab: PlayTab
       , hover: Nothing
+      , focused: Nothing
       }
   , render
   , eval: H.mkEval (H.defaultEval { handleAction = handleAction, initialize = Just Initialize })
@@ -120,14 +123,13 @@ handleAction = case _ of
     startGame
       { seed: fromMaybe 42 params.seed
       , players: fromMaybe 4 params.players
-      , board: params.moves
+      , board: false
       }
   SetTab tab -> H.modify_ _ { tab = tab, playing = false }
   HandleControls output -> do
     config <- H.gets _.config
     case output of
       ControlPanel.PlayersChanged n -> startGame config { players = n }
-      ControlPanel.BoardToggled b -> startGame config { board = b }
   HandleSeed output -> do
     config <- H.gets _.config
     case output of
@@ -137,10 +139,12 @@ handleAction = case _ of
         startGame config { seed = n }
   HandleTransport output -> case output of
     TransportBar.Scrubbed n -> moveTo n
+    TransportBar.PrevDiscovery -> stepDiscovery (-1)
+    TransportBar.NextDiscovery -> stepDiscovery 1
     TransportBar.PlayToggled -> do
       st <- H.get
       let atEnd = map maxPosition st.game == Just st.position
-      H.modify_ _ { playing = not st.playing }
+      H.modify_ _ { playing = not st.playing, focused = Nothing }
       -- pressing play at the end restarts from the top
       when (not st.playing && atEnd) (moveTo 0)
   HandleCascade output -> case output of
@@ -155,11 +159,35 @@ handleAction = case _ of
         else moveTo (st.position + 1)
       _ -> pure unit
   where
+  -- any move that is not a discovery step drops the focus: the callout
+  -- and its stepped highlight belong to the discovery cursor alone
   moveTo n = do
     st <- H.get
     case st.game of
       Nothing -> pure unit
-      Just game -> H.modify_ _ { position = clamp 0 (maxPosition game) n }
+      Just game -> H.modify_ _ { position = clamp 0 (maxPosition game) n, focused = Nothing }
+
+  -- walk the deductive-fact index by `dir` (+1 next, -1 prev); landing on
+  -- a discovery jumps the timeline to it and lights it via `focused`
+  stepDiscovery dir = do
+    st <- H.get
+    case st.game of
+      Nothing -> pure unit
+      Just game -> case pickDiscovery (discoveries game) st.position st.focused dir of
+        Nothing -> pure unit
+        Just d -> H.modify_ _ { position = d.position, focused = Just d.factId, playing = false }
+
+-- | The next/previous discovery from where the cursor sits. If a fact is
+-- | already focused we move relative to it in the index; otherwise we jump
+-- | to the first discovery beyond the current position in the step's
+-- | direction (so scrubbing then stepping resumes sensibly).
+pickDiscovery :: Array Discovery -> Int -> Maybe FactId -> Int -> Maybe Discovery
+pickDiscovery discs position focused dir =
+  case focused >>= \fid -> Array.findIndex (\d -> d.factId == fid) discs of
+    Just i -> Array.index discs (i + dir)
+    Nothing ->
+      if dir > 0 then Array.find (\d -> d.position > position) discs
+      else Array.last (Array.filter (\d -> d.position < position) discs)
 
 startGame :: forall o m. MonadAff m => Config -> H.HalogenM State Action Slots o m Unit
 startGame config = do
@@ -191,8 +219,9 @@ startGame config = do
         }
     , position = 0
     , playing = false
+    , focused = Nothing
     }
-  liftEffect (writeParamsToUrl config.seed (playerCountToInt count) config.board)
+  liftEffect (writeParamsToUrl config.seed (playerCountToInt count))
 
 -- | One global metronome; `Tick` decides whether anything moves. Simpler
 -- | than subscribing and unsubscribing around play state.
@@ -204,7 +233,7 @@ startTicker = do
     liftEffect (HS.notify listener Tick)
   void (H.subscribe emitter)
 
-readParamsFromUrl :: Effect { seed :: Maybe Int, players :: Maybe Int, moves :: Boolean }
+readParamsFromUrl :: Effect { seed :: Maybe Int, players :: Maybe Int }
 readParamsFromUrl = do
   search <- Location.search =<< Window.location =<< window
   let
@@ -215,53 +244,107 @@ readParamsFromUrl = do
   pure
     { seed: intParam "seed"
     , players: intParam "players"
-    , moves: intParam "moves" == Just 1
     }
 
-writeParamsToUrl :: Int -> Int -> Boolean -> Effect Unit
-writeParamsToUrl seedInt players moves = do
+writeParamsToUrl :: Int -> Int -> Effect Unit
+writeParamsToUrl seedInt players = do
   history <- Window.history =<< window
   let
-    url = "?seed=" <> show seedInt
-      <> "&players=" <> show players
-      <> (if moves then "&moves=1" else "")
+    url = "?seed=" <> show seedInt <> "&players=" <> show players
   History.pushState (unsafeToForeign {}) (DocumentTitle "kibitzer") (URL url) history
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action Slots m
 render st =
   HH.div [ HP.class_ (HH.ClassName "app") ]
-    case st.tab of
-      AboutTab -> [ header st, aboutPage ]
-      CodeTab -> [ header st, codePage ]
-      CascadeTab ->
-        [ header st
-        , case st.game of
-            Nothing -> HH.main_ [ HH.text "Dealing…" ]
-            Just game ->
-              HH.main [ HP.classes (map HH.ClassName [ "split3", "crossref" ]) ]
-                [ HH.slot _packs unit CascadeHost.component
-                    { game, position: st.position, packView: true, hover: st.hover }
-                    HandleCascade
-                , terminalPane terminalHover (hoverEvents st game) game st.position
-                , HH.slot _orbits unit CascadeHost.component
-                    { game, position: st.position, packView: false, hover: st.hover }
-                    HandleCascade
-                ]
+    ([ header st ] <> floatBlock <> body)
+  where
+  -- the transport drives the Game/Baskerville timeline; the Mycroft pane
+  -- is a self-contained world-space view with its own stepping, and its
+  -- seed is fixed, so the float (with its editable seed) is hidden there
+  floatBlock = case st.tab of
+    MycroftTab -> []
+    _ -> case st.game of
+      Just game -> [ floatingControls st game ]
+      Nothing -> []
+
+  body = case st.tab of
+    MycroftTab ->
+      [ HH.main [ HP.class_ (HH.ClassName "mycroft-pane") ]
+          [ HH.p [ HP.class_ (HH.ClassName "mycroft-note") ]
+              [ HH.text "Seed 768896 — the world-space view is fixed to the pedagogical example." ]
+          , HH.iframe
+              [ HP.src "worlds-768896.html"
+              , HP.class_ (HH.ClassName "worlds-frame")
+              , HP.title "Mycroft — the SMT world space"
+              ]
+          ]
+      ]
+    BaskervilleTab -> case st.game of
+      Nothing -> [ HH.main_ [ HH.text "Dealing…" ] ]
+      Just game ->
+        [ HH.main [ HP.classes (map HH.ClassName [ "split3", "crossref" ]) ]
+            [ HH.slot _packs unit CascadeHost.component
+                { game, position: st.position, packView: true, layout: RadialView, hover: effectiveHover st }
+                HandleCascade
+            , terminalPane terminalHover (hoverEvents st game) game st.position
+            , HH.slot _orbits unit CascadeHost.component
+                { game, position: st.position, packView: false, layout: RadialView, hover: effectiveHover st }
+                HandleCascade
+            ]
         ]
-      PlayTab ->
-        [ header st
-        , case st.game of
-            Nothing -> HH.main_ [ HH.text "Dealing…" ]
-            Just game ->
-              HH.main [ HP.class_ (HH.ClassName "split4") ]
-                [ tableColumn st game
-                , terminalPane terminalHover (hoverEvents st game) game st.position
-                , HH.div [ HP.class_ (HH.ClassName "watcher-pane") ]
-                    [ notebookPane game st.position ]
-                , HH.div [ HP.classes (map HH.ClassName [ "watcher-pane", "feed-col" ]) ]
-                    [ feedPane game st.position ]
-                ]
+    PlayTab -> case st.game of
+      Nothing -> [ HH.main_ [ HH.text "Dealing…" ] ]
+      Just game ->
+        [ HH.main [ HP.class_ (HH.ClassName "split4") ]
+            [ tableColumn st game
+            , terminalPane terminalHover (hoverEvents st game) game st.position
+            , HH.slot _notebook unit CascadeHost.component
+                { game, position: st.position, packView: false, layout: TableView, hover: effectiveHover st }
+                HandleCascade
+            , HH.div [ HP.classes (map HH.ClassName [ "watcher-pane", "feed-col" ]) ]
+                [ feedPane game st.position ]
+            ]
         ]
+
+-- | The floating control block, pinned top-right: seed reroll, the
+-- | four-row transport, and — when the discovery stepper has a fact in
+-- | focus — a callout naming exactly what was just worked out.
+floatingControls :: forall m. MonadAff m => State -> Game -> H.ComponentHTML Action Slots m
+floatingControls st game =
+  HH.div [ HP.class_ (HH.ClassName "controls-float") ]
+    ( [ HH.slot _seed unit SeedControl.component st.config.seed HandleSeed
+      , HH.slot _transport unit TransportBar.component
+          { position: st.position, max: maxPosition game, playing: st.playing }
+          HandleTransport
+      ]
+        <> discoveryCallout st game
+    )
+
+-- | The sentence for the fact the discovery stepper is resting on — the
+-- | `[E… · rule] …` line `describeFact` produces — shown without needing
+-- | a mouse hover so a stepped deduction speaks for itself.
+discoveryCallout :: forall m. State -> Game -> Array (H.ComponentHTML Action Slots m)
+discoveryCallout st game = case focusedFact st game of
+  Nothing -> []
+  Just fact ->
+    [ HH.div [ HP.class_ (HH.ClassName "discovery-callout") ]
+        [ HH.text (describeFact fact) ]
+    ]
+
+-- | Resolve the focused fact id against what's visible at the current
+-- | position.
+focusedFact :: State -> Game -> Maybe Fact
+focusedFact st game = do
+  fid <- st.focused
+  Array.find (\f -> f.id == fid) (facts (currentKnowledge game st.position))
+
+-- | The highlight the page acts on: a live mouse hover wins; absent one,
+-- | the discovery stepper's focused fact lights its own premise ancestry
+-- | through the very same cross-reference path.
+effectiveHover :: State -> Maybe Crossref.Hover
+effectiveHover st = case st.hover of
+  Just h -> Just h
+  Nothing -> st.focused <#> \(FactId n) -> Crossref.HoverFact n
 
 terminalHover :: { onEnter :: Int -> Action, onLeave :: Action }
 terminalHover =
@@ -269,9 +352,10 @@ terminalHover =
   , onLeave: SetHover Nothing
   }
 
--- | The terminal lines implicated by the current hover.
+-- | The terminal lines implicated by the current highlight (hover or
+-- | focused fact).
 hoverEvents :: State -> Game -> Set Int
-hoverEvents st game = case st.hover of
+hoverEvents st game = case effectiveHover st of
   Nothing -> Set.empty
   Just h ->
     ( Crossref.implicated
@@ -285,9 +369,9 @@ tableColumn :: forall m. MonadAff m => State -> Game -> H.ComponentHTML Action S
 tableColumn st game =
   HH.div [ HP.class_ (HH.ClassName "table-col") ]
     [ HH.slot _controls unit ControlPanel.component
-        { players: st.config.players, board: st.config.board }
+        { players: st.config.players }
         HandleControls
-    , boardPane game st.position
+    , groundTruthPane game st.position
     ]
 
 header :: forall m. MonadAff m => State -> H.ComponentHTML Action Slots m
@@ -299,20 +383,10 @@ header st =
             [ HH.text "A Cluedo watcher who never sees a card — and solves the murder from metadata alone." ]
         , HH.nav [ HP.class_ (HH.ClassName "tabs") ]
             [ tabButton st PlayTab "Game"
-            , tabButton st CascadeTab "Cascade"
-            , tabButton st AboutTab "About"
-            , tabButton st CodeTab "The code"
+            , tabButton st BaskervilleTab "Baskerville"
+            , tabButton st MycroftTab "Mycroft"
             ]
         ]
-    , case st.game of
-        Just game ->
-          HH.div [ HP.class_ (HH.ClassName "transport-cell") ]
-            [ HH.slot _seed unit SeedControl.component st.config.seed HandleSeed
-            , HH.slot _transport unit TransportBar.component
-                { position: st.position, max: maxPosition game, playing: st.playing }
-                HandleTransport
-            ]
-        Nothing -> HH.text ""
     ]
 
 tabButton :: forall m. MonadAff m => State -> Tab -> String -> H.ComponentHTML Action Slots m

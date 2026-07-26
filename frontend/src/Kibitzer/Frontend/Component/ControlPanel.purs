@@ -1,11 +1,8 @@
--- | The table-shape controls: player count and the board variant. Both
--- | re-deal immediately with the committed seed, so this panel carries
--- | no local state at all — it mirrors its input and raises intents.
--- | (The seed moved to the top nav as `SeedControl`; Deal died with it —
--- | every control commits itself.)
--- |
--- | This panel is the reference client for the widget-library
--- | ControlPanel requirement (componentization plan §2).
+-- | The table-shape control: player count. Re-deals immediately with the
+-- | committed seed, so this panel carries no local state at all — it
+-- | mirrors its input and raises intents. (The seed lives in the floating
+-- | transport as `SeedControl`; the board variant is gone — the demo runs
+-- | board-off, so there is nothing to toggle.)
 module Kibitzer.Frontend.Component.ControlPanel
   ( Input
   , Output(..)
@@ -23,18 +20,15 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
-type Input = { players :: Int, board :: Boolean }
+type Input = { players :: Int }
 
-data Output
-  = PlayersChanged Int
-  | BoardToggled Boolean
+data Output = PlayersChanged Int
 
 type Slot = H.Slot (Const Void) Output Unit
 
 data Action
   = Receive Input
   | SetPlayers String
-  | ToggleBoard Boolean
 
 component :: forall q m. H.Component q Input Output m
 component = H.mkComponent
@@ -52,7 +46,6 @@ handleAction = case _ of
   SetPlayers s -> case Int.fromString s of
     Just n -> H.raise (PlayersChanged n)
     Nothing -> pure unit
-  ToggleBoard b -> H.raise (BoardToggled b)
 
 render :: forall m. Input -> H.ComponentHTML Action () m
 render st =
@@ -66,12 +59,4 @@ render st =
             )
             [ 3, 4, 5, 6 ]
         )
-    , HH.label [ HP.class_ (HH.ClassName "toggle") ]
-        [ HH.input
-            [ HP.type_ HP.InputCheckbox
-            , HP.checked st.board
-            , HE.onChecked ToggleBoard
-            ]
-        , HH.text "Board"
-        ]
     ]

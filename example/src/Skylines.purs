@@ -66,8 +66,12 @@ play seedInt players movement =
 -- | Play a spread of games, keep exemplars: per configuration the
 -- | deepest DAG and the earliest watcher win, plus the maximum break
 -- | (every card located) if one turns up.
-curate :: Array Sample
-curate =
+-- | A thunk, not a CAF: 200 games are heavy, and a top-level value
+-- | binding would be forced at module load — hanging *every* CLI
+-- | subcommand (trace, etc.) that merely imports this module. Taking a
+-- | `Unit` defers the work to the pages that actually draw it.
+curate :: Unit -> Array Sample
+curate _ =
   let
     configs = [ 3 /\ false, 4 /\ false, 5 /\ false, 6 /\ false, 6 /\ true ]
     pool = configs # Array.concatMap \(p /\ mv) ->
@@ -168,11 +172,20 @@ caption s =
               <> unit_ <> " to spare</strong>"
       Nothing -> " · unsolved"
 
+-- | The pool is expensive (200 games). PureScript is strict, so a
+-- | module-level value would run at import — hanging every other
+-- | subcommand that merely imports this module. One `<-` bind defers the
+-- | work into the action's closure, so `curate` runs only when this
+-- | command runs.
 runSkylines :: Effect Unit
-runSkylines = log page
-  where
-  samples = curate
+runSkylines = do
+  u <- pure unit
+  log (skylinesPage (curate u))
 
+skylinesPage :: Array Sample -> String
+skylinesPage samples =
+  page
+  where
   figure s =
     "<figure>" <> skylineSvg s
       <> "<figcaption>" <> caption s <> "</figcaption></figure>"

@@ -61,6 +61,7 @@ type Input =
   { game :: Game
   , position :: Int
   , packView :: Boolean -- packs (true) or the grid; fixed per instance
+  , layout :: GridLayout -- the grid's arrangement at mount (Table for the notebook, Orbits for the cascade)
   , hover :: Maybe Crossref.Hover -- the page-wide cross-reference hover
   }
 
@@ -111,8 +112,8 @@ component = H.mkComponent
       , viewReady: false
       , animListener: Nothing
       , wiring: true
-      , gridLayout: RadialView
-      , layoutFrom: RadialView
+      , gridLayout: input.layout
+      , layoutFrom: input.layout
       , layoutT: 1.0
       , packView: input.packView
       , simHandle: Nothing
@@ -564,19 +565,13 @@ packsLegend =
       [ HH.text "orbit = showed one of these" ]
   ]
 
+-- | The grid toolbar carries only the wiring toggle now — the
+-- | TABLE/SKYLINE/ORBITS switcher is gone (each instance is fixed at mount:
+-- | the notebook is a table, the cascade is orbits), and the symbol legend
+-- | is left off so meaning emerges from the picture itself.
 gridLegend :: forall m. State -> Array (H.ComponentHTML Action () m)
 gridLegend st =
-  [ layoutButton st TableView "Table"
-  , layoutButton st SkylineView "Skyline"
-  , layoutButton st RadialView "Orbits"
-  , HH.span [ HP.class_ (HH.ClassName "legend-sep") ] []
-  , HH.span_ [ HH.text "● holds" ]
-  , HH.span_ [ HH.text "× ruled out" ]
-  , HH.span [ HP.class_ (HH.ClassName "legend-accent") ]
-      [ HH.text "● in the envelope" ]
-  , HH.span [ HP.class_ (HH.ClassName "legend-accent") ]
-      [ HH.text "⌐ showed one of these" ]
-  , HH.label [ HP.class_ (HH.ClassName "toggle") ]
+  [ HH.label [ HP.class_ (HH.ClassName "toggle") ]
       [ HH.input
           [ HP.type_ HP.InputCheckbox
           , HP.checked st.wiring
@@ -585,14 +580,3 @@ gridLegend st =
       , HH.text "wiring"
       ]
   ]
-
-layoutButton :: forall m. State -> GridLayout -> String -> H.ComponentHTML Action () m
-layoutButton st l label =
-  HH.button
-    [ HP.classes
-        ( map HH.ClassName
-            (if st.gridLayout == l then [ "view-btn", "active" ] else [ "view-btn" ])
-        )
-    , HE.onClick \_ -> SetGridLayout l
-    ]
-    [ HH.text label ]
