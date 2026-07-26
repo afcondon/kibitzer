@@ -161,7 +161,8 @@ to WebAssembly."""
         ]
     , section "plum" "Antecedents"
         [ para
-            """None of this is new. The core move belongs to the truth-maintenance
+            """None of this is new — except the visualisations here, which are my
+own original work. The core move belongs to the truth-maintenance
 systems of the eighties — Doyle's JTMS (1979), de Kleer's ATMS (1986):
 don't record beliefs, record beliefs paired with the reason you hold
 them. Baskerville keeps that entirely, and deliberately declines the other
