@@ -544,27 +544,11 @@ packsAnimFrame = do
     Nothing -> pure unit
 
 -- HATS owns everything under the view container; Halogen renders it
--- childless and never patches inside.
+-- childless and never patches inside. No toolbar or legend — the panes
+-- are chrome-free; the card-category hues are learned from the ground
+-- truth, and the current deduction is captioned by the page/diagram.
 render :: forall m. State -> H.ComponentHTML Action () m
 render st =
   HH.section [ HP.class_ (HH.ClassName "cascade-col") ]
-    (toolbar <> [ HH.div [ HP.id (containerId st) ] [] ])
-  where
-  -- only the packs view carries a toolbar (its legend); the grids are
-  -- always-wired and chrome-free now — no wiring toggle, no layout
-  -- switcher; the latest deduction is surfaced by the page above the grid
-  toolbar =
-    if st.packView then [ HH.div [ HP.class_ (HH.ClassName "cascade-toolbar") ] packsLegend ]
-    else []
-
--- | Legend for the possibility packs. No colour key — the table column's
--- | card chips carry the same category hues, so the mapping is learned
--- | from the ground truth itself.
-packsLegend :: forall m. Array (H.ComponentHTML Action () m)
-packsLegend =
-  [ HH.span_ [ HH.text "faint = ruled out here" ]
-  , HH.span_ [ HH.text "ring = located" ]
-  , HH.span [ HP.class_ (HH.ClassName "legend-accent") ]
-      [ HH.text "orbit = showed one of these" ]
-  ]
+    [ HH.div [ HP.id (containerId st) ] [] ]
 

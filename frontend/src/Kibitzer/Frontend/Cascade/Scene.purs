@@ -434,8 +434,8 @@ railTree label =
         [ F.x L.railAnchor.x
         , F.y (L.railAnchor.y + 4.0)
         , F.textAnchor "start"
-        , F.fontSize "13"
-        , F.fontWeight "500"
+        , F.fontSize "15"
+        , F.fontWeight "600"
         , F.fill ink
         , staticStr "textContent" label
         ]

@@ -43,7 +43,8 @@ import Kibitzer.Frontend.Crossref as Crossref
 import Kibitzer.Frontend.Types (Discovery, Game, Tab(..), currentKnowledge, discoveries, maxPosition)
 import Kibitzer.Frontend.View.Board (groundTruthPane)
 import Kibitzer.Frontend.View.Terminal (terminalPane)
-import Kibitzer.Describe (describeFact, describeSuggestion)
+import Kibitzer.Cards (roomName, suspectName, weaponName)
+import Kibitzer.Describe (describeFact)
 import Kibitzer.Game (simulate)
 import Kibitzer.Knowledge (Fact, FactId(..), envelopeIn, facts, solutionIfKnown)
 import Data.Set (Set)
@@ -276,11 +277,15 @@ render st =
     BaskervilleTab -> case st.game of
       Nothing -> [ HH.main_ [ HH.text "Dealing…" ] ]
       Just game ->
-        [ HH.main [ HP.classes (map HH.ClassName [ "split3", "crossref" ]) ]
+        -- two centred diagrams: the possibility packs collapsing on the
+        -- left, the derivation DAG growing on the right, the current event
+        -- captioned on the orbits. The packs take the *live* hover only —
+        -- the discovery stepper's focus lights the DAG node, but must not
+        -- fade the whole possibility space to its three implicated bubbles.
+        [ HH.main [ HP.class_ (HH.ClassName "split2") ]
             [ HH.slot _packs unit CascadeHost.component
-                { game, position: st.position, packView: true, layout: RadialView, hover: effectiveHover st }
+                { game, position: st.position, packView: true, layout: RadialView, hover: st.hover }
                 HandleCascade
-            , terminalPane terminalHover (hoverEvents st game) game st.position
             , HH.slot _orbits unit CascadeHost.component
                 { game, position: st.position, packView: false, layout: RadialView, hover: effectiveHover st }
                 HandleCascade
@@ -369,7 +374,10 @@ sparkline game position =
   maxCount = fromMaybe 1 (maximum (map (Array.length <<< _.newFacts) game.cascades))
   barPct c = if c == 0 then 3.0 else max 8.0 (Int.toNumber c / Int.toNumber maxCount * 100.0)
   label = case solutionIfKnown knowledge of
-    Just sol -> "The watcher has it: " <> describeSuggestion sol
+    Just sol ->
+      "Solved — " <> suspectName sol.suspect
+        <> " · " <> weaponName sol.weapon
+        <> " · " <> roomName sol.room
     Nothing -> "Envelope determined: " <> show (Set.size (envelopeIn knowledge)) <> " of 3"
 
 -- | The highlight the page acts on: a live mouse hover wins; absent one,
@@ -424,9 +432,13 @@ header st =
               , HP.alt "the watcher"
               ]
           ]
+            -- the latest-line + sparkline track the app timeline; the
+            -- Mycroft pane is a self-contained iframe, so only the eye
+            -- carries over there
             <> case st.game of
-                 Just game -> [ latestDerivation game st.position, sparkline game st.position ]
-                 Nothing -> []
+                 Just game | st.tab /= MycroftTab ->
+                   [ latestDerivation game st.position, sparkline game st.position ]
+                 _ -> []
         )
     ]
 

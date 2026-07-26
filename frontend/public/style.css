@@ -754,6 +754,22 @@ h2 {
   display: block;
 }
 
+/* the packs host uses the same fixed viewBox as the orbits — give it the
+   same box so it fits and centres identically (xMidYMid meet). Without
+   this the SVG rendered at its intrinsic 760px width, overflowing left. */
+#packs-view {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 0.5rem 0.75rem;
+}
+
+#packs-view svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* ---------- narrow screens ---------- */
 
 @media (max-width: 1000px) {
@@ -766,6 +782,25 @@ h2 {
 /* ---------- cross-referenced cascade: packs | terminal | orbits ---------- */
 
 .split3.crossref { grid-template-columns: 8fr 4fr 8fr; }
+
+/* Baskerville: two evenly-sized centred diagrams, packs | orbits, with a
+   hairline spine between them. The event log is gone — the current event
+   is captioned on the orbits itself. */
+.split2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.split2 > * { overflow: hidden; min-height: 0; }
+.split2 > * + * { border-left: 1px solid var(--ink); }
+
+@media (max-width: 1000px) {
+  .split2 { grid-template-columns: 1fr; }
+  .split2 > * + * { border-left: none; border-top: 1px solid var(--ink); }
+}
 
 .term-line:hover { background: #f4f4f4; }
 
