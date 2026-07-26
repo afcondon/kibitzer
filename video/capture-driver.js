@@ -31,10 +31,14 @@ window.KDEMO = (() => {
     b7:             6000,  // "and there it sits…"
     b8Hold:        10000,  // hold on the E61 collapse + callout
     b9:            20000,  // the library idea (About)
-    mycroftStep:    2600,  // dwell between Mycroft deduction jumps
-    b12Hold:       11000,  // hold on the E102 agreement
-    b13:           18000,  // antecedents
-    b14Hold:       10000,  // the four packages
+    b10:            9000,  // Mycroft intro (does no legwork)
+    b11:           12000,  // first enumerable frame — E71, 536 worlds; solid = known
+    backStep:       5000,  // hold at E46 (~2.6M worlds, 3 solid columns)
+    b12:           10000,  // hold at E18 (~67B worlds, 1 solid — the Kitchen)
+    mycroftStep:    1600,  // dwell between forward deduction jumps (columns lock; red = envelope)
+    b13Hold:       12000,  // hold on the solved state (E102: 21 solid, 3 red)
+    b14:           18000,  // antecedents
+    b15Hold:       10000,  // the four packages
   };
 
   let speed = 1;
@@ -55,6 +59,7 @@ window.KDEMO = (() => {
   const iframe = () => document.querySelector('iframe.worlds-frame');
   const idoc   = () => iframe()?.contentDocument;
   const iclick = id => idoc()?.getElementById(id)?.click();
+  const iScrub = pos => { const s = idoc()?.getElementById('scrub'); if (s) { s.value = pos; s.dispatchEvent(new Event('input', { bubbles: true })); } };
   async function waitIframe() {
     for (let i = 0; i < 60; i++) {
       if (idoc()?.getElementById('dn')) return true;
@@ -102,19 +107,23 @@ window.KDEMO = (() => {
     scrollToText('Two libraries, two temperaments');
     await sleep(T.b9);
 
-    // ---- 5 · Mycroft: the whole space (B10–B12) ----------------------------
+    // ---- 5 · Mycroft: the whole space (B10–B13) ----------------------------
+    // opens at E71 (first enumerable, 536 worlds, ~8 columns already solid)
     goTab(2); await waitIframe(); await sleep(T.holdAfterCut);
-    await sleep(T.mycroftStep * 2);                    // B10–B11 over the field of worlds
-    for (let i = 0; i < 8; i++) { iclick('dn'); await sleep(T.mycroftStep); }  // step the collapse
-    iclick('be'); await sleep(500);                    // land on the solved state (E102 agreement)
-    await sleep(T.b12Hold);
+    await sleep(T.b10 + T.b11);                        // B10–B11 intro + "solid = known"
+    iScrub(47); await sleep(T.backStep);               // B12: step back — E46 (~2.6M, 3 solid)
+    iScrub(19); await sleep(T.b12);                    // further back — E18 (~67B, 1 solid: Kitchen)
+    // B13: forward through the collapse — columns lock, envelope columns go red
+    for (let i = 0; i < 16; i++) { iclick('dn'); await sleep(T.mycroftStep); }
+    iclick('be'); await sleep(600);                    // land on solved (E102: 21 solid, 3 red)
+    await sleep(T.b13Hold);
 
-    // ---- 6 · Antecedents + packages (B13–B14) — About ----------------------
+    // ---- 6 · Antecedents + packages (B14–B15) — About ----------------------
     goTab(3); await sleep(T.holdAfterCut);
     scrollToText('Antecedents');
-    await sleep(T.b13);
+    await sleep(T.b14);
     scrollToText('The libraries');                      // the ink end-card
-    await sleep(T.b14Hold);
+    await sleep(T.b15Hold);
 
     console.log('[KDEMO] done');
   }

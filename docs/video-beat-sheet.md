@@ -126,30 +126,44 @@ premises. Then cut to **④ About**, *Two libraries, two temperaments*.
 
 ## 5 · Mycroft — the whole space at once  (③ Mycroft)
 
-`SHOT` Cut to **③ Mycroft**, seed 768896, at the enumeration point —
-the collapse curve and the field of worlds.
+`SHOT` Cut to **③ Mycroft**, seed 768896. It opens at **E71** — the
+first moment few enough worlds remain to draw them all: 536 rows, each a
+complete world; a handful of columns already a single colour.
 
 > **VO (B10):** There's a second way, older and opposite in temperament.
 > Baskerville does the legwork, one fact at a time. Mycroft does none —
 > it hands the whole problem to a solver, Z3, and asks a single
-> question: is there any world consistent with everything seen?
+> question: is there any world still consistent with everything seen?
 
-> **VO (B11):** How many worlds? At the deal, with six players, there
-> are forty-four trillion legal ways the cards could lie — exactly. Far
-> too many to draw, so it starts on log paper. Then, the moment the
-> survivors fit on a screen, Z3 shows *every one of them* — the totality,
-> not a sample — and each pass and show collapses it, down the decades,
-> to a single world.
+> **VO (B11):** How many worlds? At the deal, forty-four trillion — far
+> too many to draw. This is the first moment few enough remain to show
+> them all: five hundred and thirty-six. Every row is one complete world
+> still standing. And look — several columns are already a single colour.
+> That card's owner is the same in every surviving world. It's already
+> known.
 
-`ACTION` Play the collapse (or step the deduction stepper through the
-pin points) toward the solved state; land on the **E102** marker where
-space and notebook agree.
+`ACTION` **Step backward** — jump the scrubber to E46 (≈ 2.6 million
+worlds; three solid columns), then to **E18** (≈ 67 billion; a single
+solid column — the Kitchen). The grid dissolves to the big number; the
+pinned columns stay solid full-height.
 
-> **VO (B12):** Two moments fall out for free: the instant every
-> surviving world agrees on the envelope — the earliest anyone *could*
-> know — and the moment Baskerville's forward rules reach the same
-> answer. On this game, they coincide. The rules leave nothing on the
-> table.
+> **VO (B12):** And that isn't the space being small. Step back — to a
+> point where sixty-seven *billion* worlds still remain — and the
+> Kitchen's column is still solid. One card, fixed, across sixty-seven
+> billion possibilities. A column turning solid is the space settling a
+> fact — however vast it still is.
+
+`ACTION` **Step forward** through the deductions (the `Deduction ›`
+button in the pane) from E18 down the decades — columns lock one by one,
+the three envelope columns turn **red** — landing on the solved state at
+**E102** (one world; all 21 columns solid, three of them red).
+
+> **VO (B13):** Now forward. Each pass and show collapses the space, and
+> the columns lock, one by one. And when a column turns *red* — that card
+> is in the envelope. Watch the three red columns. When they agree —
+> here, at E102 — the space itself has named the murderer: Peacock, the
+> Knife, the Lounge. The same answer Baskerville reached, at the very
+> same event. The forward rules left nothing on the table.
 
 ---
 
@@ -158,7 +172,7 @@ space and notebook agree.
 `SHOT` Cut to **④ About**, the *Antecedents* section, then scroll to the
 ink end-card — the four packages.
 
-> **VO (B13):** None of this is new. The truth-maintenance systems of the
+> **VO (B14):** None of this is new. The truth-maintenance systems of the
 > eighties were taken apart, their machinery transplanted — the search
 > into Z3's engine, the labels into logic programming, the provenance
 > into databases. Every successor kept the machinery and buried the
@@ -169,7 +183,7 @@ ink end-card — the four packages.
 `SHOT` Hold on the ink end-card: `baskerville-core`, `mycroft`,
 `baskerville-mycroft`, `mycroft-z3-wasm`, the eye above them.
 
-> **VO (B14):** Four small pieces, on the registry now. Baskerville, to
+> **VO (B15):** Four small pieces, on the registry now. Baskerville, to
 > hold the reason. Mycroft, to certify it. To be continued.
 
 ---
