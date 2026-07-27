@@ -135,4 +135,8 @@ window.KDEMO = (() => {
 
   return { play, reset, goTab, press, iclick, posText, T, get speed() { return speed; }, set speed(v) { speed = v; } };
 })();
-console.log('KDEMO ready — run KDEMO.play()  (KDEMO.speed = 2 for a slow rehearsal)');
+// Press "0" to start — lets you record with the console closed (no UI in frame).
+window.addEventListener('keydown', e => {
+  if (e.key === '0') { e.preventDefault(); KDEMO.play(); }
+}, true);
+console.log('KDEMO ready — press 0 to play (or run KDEMO.play()). KDEMO.speed=2 for a slow rehearsal.');
