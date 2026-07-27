@@ -3,6 +3,8 @@
 *One who watches a card game over the players' shoulders and offers
 commentary — traditionally without seeing anyone's hand.*
 
+**▶ [Live demo](https://afcondon.github.io/kibitzer/?seed=768896&players=6) · 🎬 [Video walkthrough](https://youtu.be/LFMIwpn1Sqg)**
+
 A Cluedo (American: Clue) simulator built to demonstrate one idea: **a
 watcher who is not a player, holds no cards, and never sees a card can
 often work out the murderer, weapon, and room purely by inference from
